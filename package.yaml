@@ -1,0 +1,41 @@
+name: tdigest
+version: "0"
+synopsis: On-line accumulation of rank-based statistics such as quantiles and trimmed means
+description: |
+  A new data structure for accurate on-line accumulation of rank-based statistics such as quantiles and trimmed means.
+
+  See original paper: "Computing extremely accurate quantiles using t-digest" by Ted Dunning and Otmar Ertl
+  for more details <https://github.com/tdunning/t-digest/blob/master/docs/t-digest-paper/histo.pdf>.
+
+author: Oleg Grenrus <oleg.grenrus@iki.fi>
+maintainer: Oleg Grenrus <oleg.grenrus@iki.fi>
+license: BSD3
+github: futurice/haskell-tdigest
+category: Numeric
+tested-with: GHC==7.8.4, GHC==7.10.2, GHC==7.10.3
+extra-source-files:
+- README.md
+
+ghc-options: -Wall
+
+dependencies:
+- base                >=4.7      && <4.10
+- base-compat         >=0.6.0    && <0.10
+- containers
+- semigroups
+- QuickCheck
+
+library:
+  source-dirs: src
+
+executables:
+  tdigest-simple:
+    source-dirs: bench
+    main: Simple.hs
+    ghc-options: -threaded
+    dependencies:
+      - tdigest
+      - machines
+      - parallel
+      - tf-random
+      - time
