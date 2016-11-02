@@ -3,28 +3,33 @@
 module Main (main) where
 
 import Control.Category            (Category)
-import Control.Monad               (join, when)
+import Control.Monad               (join, replicateM, when)
 import Control.Monad.ST            (runST)
 import Control.Parallel.Strategies (parBuffer, rseq, using)
-import Data.List                   (foldl', sort)
-import Data.Machine
 import Data.Foldable               (traverse_)
+import Data.List                   (sort)
+import Data.Machine
 import Data.Machine.Runner         (runT1)
-import Data.Proxy                  (Proxy (..))
 import Data.Semigroup              ((<>))
 import Data.Time
 import Data.Word                   (Word32)
-import GHC.TypeLits                (KnownNat)
-import System.Environment          (getArgs)
-import System.Random.TF.Init       (mkTFGen)
-import System.Random.TF.Instances  (Random (..))
+import Statistics.Distribution     (ContGen (..))
+
+import Statistics.Distribution.Exponential (exponential)
+import Statistics.Distribution.Uniform     (uniformDistr)
 
 import qualified Data.Vector.Algorithms.Intro as Intro
 import qualified Data.Vector.Unboxed          as V
 import qualified Data.Vector.Unboxed.Mutable  as VU
 import qualified Options.Applicative          as O
+import qualified System.Random.MWC            as MWC
 
 import Data.TDigest
+
+
+-------------------------------------------------------------------------------
+-- Data
+-------------------------------------------------------------------------------
 
 data Method
     = MethodNaive
@@ -37,12 +42,13 @@ data Method
 data Distrib
     = DistribIncr
     | DistribUniform
+    | DistribExponent
   deriving (Show)
 
 timed :: Show a => IO a -> IO ()
-timed action = do
+timed mx = do
     s <- getCurrentTime
-    x <- action
+    x <- mx
     print x
     e <- getCurrentTime
     print (diffUTCTime e s)
@@ -50,10 +56,11 @@ timed action = do
 action :: Method -> Distrib -> Int -> IO ()
 action m d s = do
     print (m, d, s)
-    let gen = mkTFGen 42
+    let seed = initSeed (V.singleton 42)
     let input = take s $ case d of
-            DistribIncr    -> [1 .. fromIntegral s] -- not sure, but end point prevents floating
-            DistribUniform -> randoms gen
+            DistribIncr     -> [1 .. fromIntegral s] -- not sure, but end point prevents floating
+            DistribUniform  -> randomStream (uniformDistr 0 1) seed     -- median around 0.5
+            DistribExponent -> randomStream (exponential $ log 2) seed  -- median around 1.0
     let method = case m of
           MethodNaive           -> pure . naiveMedian
           MethodVector          -> pure . vectorMedian
@@ -78,9 +85,10 @@ actionParser = action
     readMethod "sparking" = Just MethodTDigestSparking
     readMethod _          = Nothing
 
-    readDistrib "incr"    = Just DistribIncr
-    readDistrib "uniform" = Just DistribUniform
-    readDistrib _         = Nothing
+    readDistrib "incr"     = Just DistribIncr
+    readDistrib "uniform"  = Just DistribUniform
+    readDistrib "exponent" = Just DistribExponent
+    readDistrib _          = Nothing
 
 main :: IO ()
 main = join (O.execParser opts)
@@ -176,12 +184,19 @@ myscan func seed = construct $ go seed
         go $! s'
 
 -------------------------------------------------------------------------------
--- Almost obsolete
+-- Statistics additions
 -------------------------------------------------------------------------------
 
--- good enough
-instance Random Double where
-    randomR = error "randomR @Double: not implemented"
-    random g =
-        let (w, g') = random g
-        in (fromIntegral (w :: Word32) / fromIntegral (maxBound :: Word32), g')
+randomStream :: ContGen d => d -> MWC.Seed -> [Double]
+randomStream d = go
+  where
+    continue (xs, seed) = xs ++ go seed
+    go seed = continue $ runST $ do
+        g <- MWC.restore seed
+        -- Generate first 10000 elements
+        xs <- replicateM 10000 (genContVar d g)
+        seed' <- MWC.save g
+        pure (xs, seed')
+
+initSeed :: V.Vector Word32 -> MWC.Seed
+initSeed v = runST $ MWC.initialize v >>= MWC.save

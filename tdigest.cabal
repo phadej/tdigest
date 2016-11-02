@@ -56,7 +56,8 @@ benchmark tdigest-simple
     , tdigest
     , machines
     , parallel
-    , tf-random
+    , mwc-random
+    , statistics
     , time
     , optparse-applicative >= 0.13
     , vector
