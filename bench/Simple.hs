@@ -1,8 +1,10 @@
-{-# LANGUAGE ScopedTypeVariables, DataKinds #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main (main) where
 
 import Control.Category            (Category)
 import Control.Monad               (when)
+import Control.Monad.ST            (runST)
 import Control.Parallel            (par)
 import Control.Parallel.Strategies (parBuffer, rseq, using)
 import Data.List                   (foldl', sort)
@@ -11,10 +13,14 @@ import Data.Machine.Runner         (runT1)
 import Data.Proxy                  (Proxy (..))
 import Data.Time
 import Data.Word                   (Word32)
+import GHC.TypeLits                (KnownNat)
 import System.Environment          (getArgs)
 import System.Random.TF.Init       (mkTFGen)
 import System.Random.TF.Instances  (Random (..))
-import GHC.TypeLits   (KnownNat)
+
+import qualified Data.Vector.Algorithms.Intro as Intro
+import qualified Data.Vector.Unboxed          as V
+import qualified Data.Vector.Unboxed.Mutable  as VU
 
 import Data.TDigest
 
@@ -27,7 +33,7 @@ timed action = do
     print (diffUTCTime e s)
 
 size :: Int
-size = 5000000 
+size = 5000000
 
 size2 :: Int
 size2 = 15000000
@@ -36,22 +42,32 @@ naiveMedian :: [Double] -> Maybe Double
 naiveMedian [] = Nothing
 naiveMedian xs = Just $ sort xs !! (length xs `div` 2)
 
+vectorMedian :: [Double] -> Maybe Double
+vectorMedian l
+    | null l    = Nothing
+    | otherwise = runST $ do
+        let v = V.fromList l
+        mv <- V.thaw v
+        Intro.sort mv
+        Just <$> VU.unsafeRead mv (VU.length mv `div` 2)
+
 main :: IO ()
 main = do
     args <- getArgs
     let g = mkTFGen 42
     case args of
-        ["-naive"]            -> timed $ pure $ naiveMedian $ map fromIntegral [1..size]
+        ["-naive"]            -> timed $ pure $ naiveMedian  $ map fromIntegral [1..size]
+        ["-vector"]           -> timed $ pure $ vectorMedian $ map fromIntegral [1..size]
         ["-tdigest"]          -> timed $ pure $ medianF    (Proxy :: Proxy 10) $ map fromIntegral [1..size]
         ["-tdigest-par"]      -> timed $ pure $ parMedianF (Proxy :: Proxy 10) $ map fromIntegral [1..size]
         -- TODO: configurable precision
-        ["-naive-rand"]       -> timed $ pure $ naiveMedian $ take size2 $ randoms g
-        ["-tdigest-rand"]     -> timed $ viaMachine         $ take size2 $ randoms g
-        ["-tdigest-par-rand"] -> timed $ viaParallelMachine $ take size2 $ randoms g
+        ["-vector-rand"]      -> timed $ pure $ vectorMedian $ take size2 $ randoms g
+        ["-tdigest-rand"]     -> timed $ viaMachine          $ take size2 $ randoms g
+        ["-tdigest-par-rand"] -> timed $ viaParallelMachine  $ take size2 $ randoms g
         _ -> pure ()
 
 viaMachine :: [Double] -> IO (Maybe (Maybe Double))
-viaMachine input = fmap (median :: TDigest 50 -> Maybe Double) <$> runT1 machine
+viaMachine input = fmap (median :: TDigest 10 -> Maybe Double) <$> runT1 machine
   where
     machine
         =  fold (flip insert) mempty
@@ -68,7 +84,7 @@ viaParallelMachine input = fmap median <$> runT1 machine
     machine
         = fold mappend mempty
         <~ sparking
-        <~ mapping (tdigest :: [Double] -> TDigest 50)
+        <~ mapping (tdigest :: [Double] -> TDigest 10)
         <~ buffered 10000
         <~ autoM inputAction
         <~ counting

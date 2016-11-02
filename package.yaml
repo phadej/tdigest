@@ -38,3 +38,5 @@ benchmarks:
       - parallel
       - tf-random
       - time
+      - vector
+      - vector-algorithms
