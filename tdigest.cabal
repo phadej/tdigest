@@ -39,6 +39,7 @@ library
   exposed-modules:
       Data.TDigest
       Data.TDigest.Internal.Ref
+      Data.TDigest.Internal.Type
       Data.TDigest.Postprocess
   default-language: Haskell2010
 
@@ -58,6 +59,7 @@ benchmark tdigest-simple
     , parallel
     , tf-random
     , time
+    , optparse-applicative >= 0.13
     , vector
     , vector-algorithms
   default-language: Haskell2010

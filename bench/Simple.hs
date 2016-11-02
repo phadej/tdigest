@@ -3,7 +3,7 @@
 module Main (main) where
 
 import Control.Category            (Category)
-import Control.Monad               (when)
+import Control.Monad               (join, when)
 import Control.Monad.ST            (runST)
 import Control.Parallel            (par)
 import Control.Parallel.Strategies (parBuffer, rseq, using)
@@ -11,6 +11,7 @@ import Data.List                   (foldl', sort)
 import Data.Machine
 import Data.Machine.Runner         (runT1)
 import Data.Proxy                  (Proxy (..))
+import Data.Semigroup              ((<>))
 import Data.Time
 import Data.Word                   (Word32)
 import GHC.TypeLits                (KnownNat)
@@ -21,8 +22,21 @@ import System.Random.TF.Instances  (Random (..))
 import qualified Data.Vector.Algorithms.Intro as Intro
 import qualified Data.Vector.Unboxed          as V
 import qualified Data.Vector.Unboxed.Mutable  as VU
+import qualified Options.Applicative          as O
 
 import Data.TDigest
+
+data Method
+    = MethodNaive
+    | MethodVector
+    | MethodTDigest
+    | MethodTDigestBuffered
+  deriving (Show)
+
+data Distrib
+    = DistribIncr
+    | DistribUniform
+  deriving (Show)
 
 timed :: Show a => IO a -> IO ()
 timed action = do
@@ -32,11 +46,48 @@ timed action = do
     e <- getCurrentTime
     print (diffUTCTime e s)
 
-size :: Int
-size = 5000000
+action :: Method -> Distrib -> Int -> IO ()
+action m d s = do
+    print (m, d, s)
+    let gen = mkTFGen 42
+    let input = take s $ case d of
+            DistribIncr    -> [1 .. fromIntegral s] -- not sure, but end point prevents floating
+            DistribUniform -> randoms gen
+    let method = case m of
+          MethodNaive           -> pure . naiveMedian
+          MethodVector          -> pure . vectorMedian
+          MethodTDigest         -> viaMachine
+          MethodTDigestBuffered -> viaBufferedMachine
+    timed $ method input
 
-size2 :: Int
-size2 = 15000000
+actionParser :: O.Parser (IO ())
+actionParser = action
+    <$> O.option (O.maybeReader readMethod) (
+        O.short 'm' <> O.long "method" <> O.metavar ":method" <> O.value MethodTDigest)
+    <*> O.option (O.maybeReader readDistrib) (
+        O.short 'd' <> O.long "distrib" <> O.metavar ":distrib" <> O.value DistribUniform)
+    <*> O.option O.auto (
+        O.short 's' <> O.long "size" <> O.metavar ":size" <> O.value 100000)
+  where
+    readMethod "naive"    = Just MethodNaive
+    readMethod "vector"   = Just MethodVector
+    readMethod "digest"   = Just MethodTDigest
+    readMethod "buffered" = Just MethodTDigestBuffered
+    readMethod _          = Nothing
+
+    readDistrib "incr"    = Just DistribIncr
+    readDistrib "uniform" = Just DistribUniform
+    readDistrib _         = Nothing
+
+main :: IO ()
+main = join (O.execParser opts)
+  where
+    opts = O.info (O.helper <*> actionParser)
+        (O.fullDesc <> O.header "tdigest-simple - a small utility to explore tdigest")
+
+-------------------------------------------------------------------------------
+-- Methods
+-------------------------------------------------------------------------------
 
 naiveMedian :: [Double] -> Maybe Double
 naiveMedian [] = Nothing
@@ -51,23 +102,8 @@ vectorMedian l
         Intro.sort mv
         Just <$> VU.unsafeRead mv (VU.length mv `div` 2)
 
-main :: IO ()
-main = do
-    args <- getArgs
-    let g = mkTFGen 42
-    case args of
-        ["-naive"]            -> timed $ pure $ naiveMedian  $ map fromIntegral [1..size]
-        ["-vector"]           -> timed $ pure $ vectorMedian $ map fromIntegral [1..size]
-        ["-tdigest"]          -> timed $ pure $ medianF    (Proxy :: Proxy 10) $ map fromIntegral [1..size]
-        ["-tdigest-par"]      -> timed $ pure $ parMedianF (Proxy :: Proxy 10) $ map fromIntegral [1..size]
-        -- TODO: configurable precision
-        ["-vector-rand"]      -> timed $ pure $ vectorMedian $ take size2 $ randoms g
-        ["-tdigest-rand"]     -> timed $ viaMachine          $ take size2 $ randoms g
-        ["-tdigest-par-rand"] -> timed $ viaParallelMachine  $ take size2 $ randoms g
-        _ -> pure ()
-
-viaMachine :: [Double] -> IO (Maybe (Maybe Double))
-viaMachine input = fmap (median :: TDigest 10 -> Maybe Double) <$> runT1 machine
+viaMachine :: [Double] -> IO (Maybe Double)
+viaMachine input = join . fmap (median :: TDigest 10 -> Maybe Double) <$> runT1 machine
   where
     machine
         =  fold (flip insert) mempty
@@ -78,8 +114,8 @@ viaMachine input = fmap (median :: TDigest 10 -> Maybe Double) <$> runT1 machine
         when (i `mod` 1000000 == 0) $ putStrLn $ "consumed " ++ show i
         return x
 
-viaParallelMachine :: [Double] -> IO (Maybe (Maybe Double))
-viaParallelMachine input = fmap median <$> runT1 machine
+viaBufferedMachine :: [Double] -> IO (Maybe Double)
+viaBufferedMachine input = join . fmap median <$> runT1 machine
   where
     machine
         = fold mappend mempty
@@ -92,6 +128,10 @@ viaParallelMachine input = fmap median <$> runT1 machine
     inputAction (x, i) = do
         when (i `mod` 1000000 == 0) $ putStrLn $ "consumed " ++ show i
         return x
+
+-------------------------------------------------------------------------------
+-- Machine additions
+-------------------------------------------------------------------------------
 
 sparking :: (Category k, Monad m) => MachineT m (k a) a
 sparking = mapping (\x -> x `par` x)
@@ -110,26 +150,9 @@ myscan func seed = construct $ go seed
         yield x
         go $! s'
 
-
-
-medianF
-    :: forall comp f. (Foldable f, KnownNat comp)
-    => Proxy comp -> f Double -> Maybe Double
-medianF _ x = median (tdigest x :: TDigest comp)
-
-parMedianF
-    :: forall comp. KnownNat comp
-    => Proxy comp -> [Double] -> Maybe Double
-parMedianF _
-    = median
-    . foldl' mappend mempty
-    . (\dss -> map (tdigest :: [Double] -> TDigest comp) dss `using` parBuffer 2 rseq)
-    . chunkList 10000
-
--- | Split a list into chunks of /n/ elements.
-chunkList :: Int -> [a] -> [[a]]
-chunkList _ [] = []
-chunkList n xs = as : chunkList n bs where (as,bs) = splitAt n xs
+-------------------------------------------------------------------------------
+-- Almost obsolete
+-------------------------------------------------------------------------------
 
 -- good enough
 instance Random Double where

@@ -38,5 +38,6 @@ benchmarks:
       - parallel
       - tf-random
       - time
+      - optparse-applicative >= 0.13
       - vector
       - vector-algorithms
