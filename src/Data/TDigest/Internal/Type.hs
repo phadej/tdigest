@@ -61,7 +61,7 @@ insertCentroid
 insertCentroid (x, w) (TDigest centroids count)
     -- x in map, special case
     | x `Map.member` centroids = TDigest (Map.adjust (+w) x centroids) n
-    | otherwise                = compress $ validate $ TDigest (process n compression centroids' x w s2) n
+    | otherwise                = validate $ TDigest (process n compression centroids' x w s2) n
   where
     n = count + w
 

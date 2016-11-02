@@ -56,4 +56,4 @@ insert
     => Double         -- ^ element
     -> TDigest comp
     -> TDigest comp
-insert x = insertCentroid (x, 1)
+insert x = compress . insertCentroid (x, 1)

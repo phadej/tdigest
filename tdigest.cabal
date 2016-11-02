@@ -58,6 +58,6 @@ benchmark tdigest-simple
     , parallel
     , tf-random
     , time
-    , vector-algorithms
     , vector
+    , vector-algorithms
   default-language: Haskell2010
