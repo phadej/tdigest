@@ -1,43 +1,46 @@
 ++ stack path --dist-dir
 + BENCH=.stack-work/dist/x86_64-osx/Cabal-1.24.0.0/build/tdigest-simple/tdigest-simple
-+ .stack-work/dist/x86_64-osx/Cabal-1.24.0.0/build/tdigest-simple/tdigest-simple +RTS -s -N2 -RTS -vector-rand
-Just 0.500166577636303
-5.906222s
-  10,530,374,224 bytes allocated in the heap
-      21,462,952 bytes copied during GC
-     134,272,408 bytes maximum residency (11 sample(s))
-       2,095,664 bytes maximum slop
-             266 MB total memory in use (69 MB lost due to fragmentation)
++ SIZE=50000000
++ .stack-work/dist/x86_64-osx/Cabal-1.24.0.0/build/tdigest-simple/tdigest-simple +RTS -s -N2 -RTS -s 50000000 -m vector
+(MethodVector,DistribUniform,50000000)
+Just 0.5000535646686455
+19.402282s
+  35,276,788,312 bytes allocated in the heap
+      70,794,976 bytes copied during GC
+     536,957,496 bytes maximum residency (13 sample(s))
+       2,092,480 bytes maximum slop
+            1036 MB total memory in use (260 MB lost due to fragmentation)
 
                                      Tot time (elapsed)  Avg pause  Max pause
-  Gen  0     19706 colls, 19706 par    0.239s   0.235s     0.0000s    0.0028s
-  Gen  1        11 colls,    10 par    0.001s   0.027s     0.0024s    0.0257s
+  Gen  0     65704 colls, 65704 par    0.922s   0.519s     0.0000s    0.0051s
+  Gen  1        13 colls,    12 par    0.003s   0.091s     0.0070s    0.0892s
 
-  Parallel GC work balance: 2.44% (serial 0%, perfect 100%)
+  Parallel GC work balance: 0.53% (serial 0%, perfect 100%)
 
   TASKS: 6 (1 bound, 5 peak workers (5 total), using -N2)
 
   SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)
 
   INIT    time    0.000s  (  0.003s elapsed)
-  MUT     time    5.425s  (  5.645s elapsed)
-  GC      time    0.240s  (  0.261s elapsed)
-  EXIT    time    0.000s  (  0.026s elapsed)
-  Total   time    5.666s  (  5.935s elapsed)
+  MUT     time   18.051s  ( 18.793s elapsed)
+  GC      time    0.924s  (  0.610s elapsed)
+  EXIT    time    0.000s  (  0.089s elapsed)
+  Total   time   18.977s  ( 19.494s elapsed)
 
-  Alloc rate    1,941,185,859 bytes per MUT second
+  Alloc rate    1,954,283,134 bytes per MUT second
 
-  Productivity  95.8% of total user, 91.4% of total elapsed
+  Productivity  95.1% of total user, 92.6% of total elapsed
 
-gc_alloc_block_sync: 178
+gc_alloc_block_sync: 4930
 whitehole_spin: 0
 gen[0].sync: 0
 gen[1].sync: 0
 
-real	0m5.965s
-user	0m5.666s
-sys	0m0.533s
-+ .stack-work/dist/x86_64-osx/Cabal-1.24.0.0/build/tdigest-simple/tdigest-simple +RTS -s -N2 -RTS -tdigest-rand
+real	0m19.585s
+user	0m18.977s
+sys	0m1.527s
++ .stack-work/dist/x86_64-osx/Cabal-1.24.0.0/build/tdigest-simple/tdigest-simple +RTS -s -N2 -RTS -s 50000000 -m sparking
+(MethodTDigestSparking,DistribUniform,50000000)
 consumed 0
 consumed 1000000
 consumed 2000000
@@ -53,17 +56,228 @@ consumed 11000000
 consumed 12000000
 consumed 13000000
 consumed 14000000
-Just (Just 0.49929176274250603)
-180.20309s
- 509,345,400,360 bytes allocated in the heap
-   5,743,537,584 bytes copied during GC
-         105,488 bytes maximum residency (702 sample(s))
-          56,976 bytes maximum slop
+consumed 15000000
+consumed 16000000
+consumed 17000000
+consumed 18000000
+consumed 19000000
+consumed 20000000
+consumed 21000000
+consumed 22000000
+consumed 23000000
+consumed 24000000
+consumed 25000000
+consumed 26000000
+consumed 27000000
+consumed 28000000
+consumed 29000000
+consumed 30000000
+consumed 31000000
+consumed 32000000
+consumed 33000000
+consumed 34000000
+consumed 35000000
+consumed 36000000
+consumed 37000000
+consumed 38000000
+consumed 39000000
+consumed 40000000
+consumed 41000000
+consumed 42000000
+consumed 43000000
+consumed 44000000
+consumed 45000000
+consumed 46000000
+consumed 47000000
+consumed 48000000
+consumed 49000000
+Just 0.5135090726897044
+186.60882s
+ 898,738,028,536 bytes allocated in the heap
+  44,263,748,504 bytes copied during GC
+      10,358,288 bytes maximum residency (4450 sample(s))
+       1,891,088 bytes maximum slop
+              28 MB total memory in use (0 MB lost due to fragmentation)
+
+                                     Tot time (elapsed)  Avg pause  Max pause
+  Gen  0     1041501 colls, 1041501 par   107.532s  32.550s     0.0000s    0.0158s
+  Gen  1      4450 colls,  4449 par   31.182s  17.248s     0.0039s    0.0181s
+
+  Parallel GC work balance: 20.97% (serial 0%, perfect 100%)
+
+  TASKS: 6 (1 bound, 5 peak workers (5 total), using -N2)
+
+  SPARKS: 5001 (4519 converted, 0 overflowed, 0 dud, 0 GC'd, 482 fizzled)
+
+  INIT    time    0.000s  (  0.003s elapsed)
+  MUT     time  170.387s  (136.807s elapsed)
+  GC      time  138.714s  ( 49.798s elapsed)
+  EXIT    time    0.000s  (  0.001s elapsed)
+  Total   time  309.104s  (186.608s elapsed)
+
+  Alloc rate    5,274,677,762 bytes per MUT second
+
+  Productivity  55.1% of total user, 91.3% of total elapsed
+
+gc_alloc_block_sync: 3069495
+whitehole_spin: 0
+gen[0].sync: 43
+gen[1].sync: 11299
+
+real	3m6.629s
+user	5m9.104s
+sys	0m18.415s
++ .stack-work/dist/x86_64-osx/Cabal-1.24.0.0/build/tdigest-simple/tdigest-simple +RTS -s -N2 -RTS -s 50000000 -m buffered
+(MethodTDigestBuffered,DistribUniform,50000000)
+consumed 0
+consumed 1000000
+consumed 2000000
+consumed 3000000
+consumed 4000000
+consumed 5000000
+consumed 6000000
+consumed 7000000
+consumed 8000000
+consumed 9000000
+consumed 10000000
+consumed 11000000
+consumed 12000000
+consumed 13000000
+consumed 14000000
+consumed 15000000
+consumed 16000000
+consumed 17000000
+consumed 18000000
+consumed 19000000
+consumed 20000000
+consumed 21000000
+consumed 22000000
+consumed 23000000
+consumed 24000000
+consumed 25000000
+consumed 26000000
+consumed 27000000
+consumed 28000000
+consumed 29000000
+consumed 30000000
+consumed 31000000
+consumed 32000000
+consumed 33000000
+consumed 34000000
+consumed 35000000
+consumed 36000000
+consumed 37000000
+consumed 38000000
+consumed 39000000
+consumed 40000000
+consumed 41000000
+consumed 42000000
+consumed 43000000
+consumed 44000000
+consumed 45000000
+consumed 46000000
+consumed 47000000
+consumed 48000000
+consumed 49000000
+Just 0.5135090726897044
+331.745253s
+ 897,183,171,712 bytes allocated in the heap
+  34,325,302,232 bytes copied during GC
+       1,109,792 bytes maximum residency (16131 sample(s))
+          70,016 bytes maximum slop
+               4 MB total memory in use (0 MB lost due to fragmentation)
+
+                                     Tot time (elapsed)  Avg pause  Max pause
+  Gen  0     1704659 colls, 1704659 par   79.989s  50.027s     0.0000s    0.0193s
+  Gen  1     16131 colls, 16130 par   16.544s  10.097s     0.0006s    0.0070s
+
+  Parallel GC work balance: 1.26% (serial 0%, perfect 100%)
+
+  TASKS: 6 (1 bound, 5 peak workers (5 total), using -N2)
+
+  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)
+
+  INIT    time    0.000s  (  0.003s elapsed)
+  MUT     time  255.443s  (271.613s elapsed)
+  GC      time   96.533s  ( 60.124s elapsed)
+  EXIT    time    0.000s  (  0.000s elapsed)
+  Total   time  351.978s  (331.740s elapsed)
+
+  Alloc rate    3,512,259,612 bytes per MUT second
+
+  Productivity  72.6% of total user, 77.0% of total elapsed
+
+gc_alloc_block_sync: 226962
+whitehole_spin: 0
+gen[0].sync: 0
+gen[1].sync: 150
+
+real	5m31.756s
+user	5m51.978s
+sys	0m44.830s
++ .stack-work/dist/x86_64-osx/Cabal-1.24.0.0/build/tdigest-simple/tdigest-simple +RTS -s -N2 -RTS -s 50000000 -m digest
+(MethodTDigest,DistribUniform,50000000)
+consumed 0
+consumed 1000000
+consumed 2000000
+consumed 3000000
+consumed 4000000
+consumed 5000000
+consumed 6000000
+consumed 7000000
+consumed 8000000
+consumed 9000000
+consumed 10000000
+consumed 11000000
+consumed 12000000
+consumed 13000000
+consumed 14000000
+consumed 15000000
+consumed 16000000
+consumed 17000000
+consumed 18000000
+consumed 19000000
+consumed 20000000
+consumed 21000000
+consumed 22000000
+consumed 23000000
+consumed 24000000
+consumed 25000000
+consumed 26000000
+consumed 27000000
+consumed 28000000
+consumed 29000000
+consumed 30000000
+consumed 31000000
+consumed 32000000
+consumed 33000000
+consumed 34000000
+consumed 35000000
+consumed 36000000
+consumed 37000000
+consumed 38000000
+consumed 39000000
+consumed 40000000
+consumed 41000000
+consumed 42000000
+consumed 43000000
+consumed 44000000
+consumed 45000000
+consumed 46000000
+consumed 47000000
+consumed 48000000
+consumed 49000000
+Just 0.4992963997751997
+621.526362s
+1,836,145,193,272 bytes allocated in the heap
+  21,046,911,752 bytes copied during GC
+         107,144 bytes maximum residency (2548 sample(s))
+          61,056 bytes maximum slop
                3 MB total memory in use (0 MB lost due to fragmentation)
 
                                      Tot time (elapsed)  Avg pause  Max pause
-  Gen  0     975422 colls, 975422 par   28.902s  19.042s     0.0000s    0.0133s
-  Gen  1       702 colls,   701 par    0.170s   0.108s     0.0002s    0.0016s
+  Gen  0     3515977 colls, 3515977 par   108.015s  71.412s     0.0000s    0.0309s
+  Gen  1      2548 colls,  2547 par    0.668s   0.417s     0.0002s    0.0026s
 
   Parallel GC work balance: 0.20% (serial 0%, perfect 100%)
 
@@ -71,73 +285,21 @@ Just (Just 0.49929176274250603)
 
   SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)
 
-  INIT    time    0.000s  (  0.004s elapsed)
-  MUT     time  152.368s  (161.049s elapsed)
-  GC      time   29.072s  ( 19.150s elapsed)
-  EXIT    time    0.000s  (  0.000s elapsed)
-  Total   time  181.443s  (180.203s elapsed)
-
-  Alloc rate    3,342,852,868 bytes per MUT second
-
-  Productivity  84.0% of total user, 84.6% of total elapsed
-
-gc_alloc_block_sync: 73418
-whitehole_spin: 0
-gen[0].sync: 0
-gen[1].sync: 1
-
-real	3m0.224s
-user	3m1.443s
-sys	0m20.634s
-+ .stack-work/dist/x86_64-osx/Cabal-1.24.0.0/build/tdigest-simple/tdigest-simple +RTS -s -N2 -RTS -tdigest-par-rand
-consumed 0
-consumed 1000000
-consumed 2000000
-consumed 3000000
-consumed 4000000
-consumed 5000000
-consumed 6000000
-consumed 7000000
-consumed 8000000
-consumed 9000000
-consumed 10000000
-consumed 11000000
-consumed 12000000
-consumed 13000000
-consumed 14000000
-Just (Just 0.4990024294394641)
-112.856771s
- 268,057,092,840 bytes allocated in the heap
-  10,259,654,032 bytes copied during GC
-       1,110,240 bytes maximum residency (4808 sample(s))
-          68,272 bytes maximum slop
-               4 MB total memory in use (0 MB lost due to fragmentation)
-
-                                     Tot time (elapsed)  Avg pause  Max pause
-  Gen  0     508887 colls, 508887 par   25.671s  20.310s     0.0000s    0.0219s
-  Gen  1      4808 colls,  4807 par    5.930s   4.092s     0.0009s    0.0165s
-
-  Parallel GC work balance: 1.23% (serial 0%, perfect 100%)
-
-  TASKS: 6 (1 bound, 5 peak workers (5 total), using -N2)
-
-  SPARKS: 1501 (62 converted, 0 overflowed, 0 dud, 701 GC'd, 738 fizzled)
-
   INIT    time    0.000s  (  0.003s elapsed)
-  MUT     time   80.958s  ( 88.452s elapsed)
-  GC      time   31.601s  ( 24.402s elapsed)
+  MUT     time  513.277s  (549.008s elapsed)
+  GC      time  108.683s  ( 71.828s elapsed)
   EXIT    time    0.000s  (  0.000s elapsed)
-  Total   time  112.560s  (112.857s elapsed)
+  Total   time  621.962s  (620.840s elapsed)
 
-  Alloc rate    3,311,082,486 bytes per MUT second
+  Alloc rate    3,577,299,637 bytes per MUT second
 
-  Productivity  71.9% of total user, 71.7% of total elapsed
+  Productivity  82.5% of total user, 82.7% of total elapsed
 
-gc_alloc_block_sync: 81964
+gc_alloc_block_sync: 523944
 whitehole_spin: 0
 gen[0].sync: 0
-gen[1].sync: 140
+gen[1].sync: 16
 
-real	1m52.876s
-user	1m52.560s
-sys	0m14.545s
+real	10m21.538s
+user	10m21.962s
+sys	1m17.088s

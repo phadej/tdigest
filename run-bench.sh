@@ -5,7 +5,9 @@
 set -ex
 
 BENCH=$(stack path --dist-dir)/build/tdigest-simple/tdigest-simple
+SIZE=50000000
 
-time $BENCH +RTS -s -N2 -RTS -vector-rand
-time $BENCH +RTS -s -N2 -RTS -tdigest-rand
-time $BENCH +RTS -s -N2 -RTS -tdigest-par-rand
+time $BENCH +RTS -s -N2 -RTS -s $SIZE -m vector
+time $BENCH +RTS -s -N2 -RTS -s $SIZE -m sparking
+time $BENCH +RTS -s -N2 -RTS -s $SIZE -m buffered
+time $BENCH +RTS -s -N2 -RTS -s $SIZE -m digest

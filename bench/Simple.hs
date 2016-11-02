@@ -5,10 +5,10 @@ module Main (main) where
 import Control.Category            (Category)
 import Control.Monad               (join, when)
 import Control.Monad.ST            (runST)
-import Control.Parallel            (par)
 import Control.Parallel.Strategies (parBuffer, rseq, using)
 import Data.List                   (foldl', sort)
 import Data.Machine
+import Data.Foldable               (traverse_)
 import Data.Machine.Runner         (runT1)
 import Data.Proxy                  (Proxy (..))
 import Data.Semigroup              ((<>))
@@ -31,6 +31,7 @@ data Method
     | MethodVector
     | MethodTDigest
     | MethodTDigestBuffered
+    | MethodTDigestSparking
   deriving (Show)
 
 data Distrib
@@ -58,6 +59,7 @@ action m d s = do
           MethodVector          -> pure . vectorMedian
           MethodTDigest         -> viaMachine
           MethodTDigestBuffered -> viaBufferedMachine
+          MethodTDigestSparking -> viaSparkingMachine
     timed $ method input
 
 actionParser :: O.Parser (IO ())
@@ -73,6 +75,7 @@ actionParser = action
     readMethod "vector"   = Just MethodVector
     readMethod "digest"   = Just MethodTDigest
     readMethod "buffered" = Just MethodTDigestBuffered
+    readMethod "sparking" = Just MethodTDigestSparking
     readMethod _          = Nothing
 
     readDistrib "incr"    = Just DistribIncr
@@ -119,6 +122,20 @@ viaBufferedMachine input = join . fmap median <$> runT1 machine
   where
     machine
         = fold mappend mempty
+        <~ mapping (tdigest :: [Double] -> TDigest 10)
+        <~ buffered 10000
+        <~ autoM inputAction
+        <~ counting
+        <~ source input
+    inputAction (x, i) = do
+        when (i `mod` 1000000 == 0) $ putStrLn $ "consumed " ++ show i
+        return x
+
+viaSparkingMachine :: [Double] -> IO (Maybe Double)
+viaSparkingMachine input = join . fmap median <$> runT1 machine
+  where
+    machine
+        =  fold mappend mempty
         <~ sparking
         <~ mapping (tdigest :: [Double] -> TDigest 10)
         <~ buffered 10000
@@ -133,8 +150,16 @@ viaBufferedMachine input = join . fmap median <$> runT1 machine
 -- Machine additions
 -------------------------------------------------------------------------------
 
-sparking :: (Category k, Monad m) => MachineT m (k a) a
-sparking = mapping (\x -> x `par` x)
+sparking :: (Monad m) => ProcessT m a a
+sparking
+    =  unbuffered
+    <~ mapping (\x -> x `using` parBuffer 4 rseq)
+    <~ buffered 10
+
+unbuffered :: Monad m => ProcessT m [a] a
+unbuffered = repeatedly $ do
+    xs <- await
+    traverse_ yield xs
 
 counting :: Monad m => ProcessT m a (a, Int)
 counting = myscan f 0

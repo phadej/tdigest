@@ -39,7 +39,6 @@ library
   exposed-modules:
       Data.TDigest
       Data.TDigest.Internal.Ref
-      Data.TDigest.Internal.Type
       Data.TDigest.Postprocess
   default-language: Haskell2010
 
