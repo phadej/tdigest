@@ -35,7 +35,7 @@ import Prelude.Compat
 import Data.List      (foldl')
 import GHC.TypeLits   (KnownNat)
 
-import Data.TDigest.Internal.Type
+import Data.TDigest.Internal.Ref
 import Data.TDigest.Postprocess
 
 -------------------------------------------------------------------------------

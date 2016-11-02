@@ -16,7 +16,7 @@ import Prelude.Compat
 
 import qualified Data.Map.Strict as Map
 
-import Data.TDigest.Internal.Type
+import Data.TDigest.Internal.Ref
 
 -------------------------------------------------------------------------------
 -- Histogram

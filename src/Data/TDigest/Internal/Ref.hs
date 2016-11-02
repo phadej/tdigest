@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 -- | Internals of 'TDigest'. This is "reference", not so efficient implementation
 -- based on "Data.Map.Strict" from @containers@.
-module Data.TDigest.Internal.Type where
+module Data.TDigest.Internal.Ref where
 
 import Prelude ()
 import Prelude.Compat
