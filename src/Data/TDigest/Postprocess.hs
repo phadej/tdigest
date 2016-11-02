@@ -1,3 +1,7 @@
+-- | 'TDigest' postprocessing functions.
+--
+-- These are re-exported from "Data.TDigest" module.
+--
 module Data.TDigest.Postprocess (
     -- * Histogram
     histogram,
@@ -10,7 +14,7 @@ module Data.TDigest.Postprocess (
 import Prelude ()
 import Prelude.Compat
 
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 
 import Data.TDigest.Internal.Type
 
@@ -19,12 +23,13 @@ import Data.TDigest.Internal.Type
 -------------------------------------------------------------------------------
 
 data HistBin = HistBin
-    { hbMin    :: !Double
-    , hbMax    :: !Double
-    , hbWeight :: !Double
+    { hbMin    :: !Double  -- ^ lower bound
+    , hbMax    :: !Double  -- ^ max bound
+    , hbWeight :: !Double  -- ^ weight ("area" of the bar)
     }
   deriving (Show)
 
+-- | Calculate histogram based on the 'TDigest'.
 histogram :: TDigest comp -> [HistBin]
 histogram (TDigest centroids _) = iter Nothing $ Map.toList centroids
   where

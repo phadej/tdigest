@@ -36,14 +36,14 @@ library
     , base-compat         >=0.6.0    && <0.10
     , containers
     , semigroups
-    , QuickCheck
   exposed-modules:
       Data.TDigest
       Data.TDigest.Internal.Type
       Data.TDigest.Postprocess
   default-language: Haskell2010
 
-executable tdigest-simple
+benchmark tdigest-simple
+  type: exitcode-stdio-1.0
   main-is: Simple.hs
   hs-source-dirs:
       bench
@@ -53,7 +53,6 @@ executable tdigest-simple
     , base-compat         >=0.6.0    && <0.10
     , containers
     , semigroups
-    , QuickCheck
     , tdigest
     , machines
     , parallel

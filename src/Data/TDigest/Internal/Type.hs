@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE KindSignatures      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+-- | Internals of 'TDigest'. This is "reference", not so efficient implementation
+-- based on "Data.Map.Strict" from @containers@.
 module Data.TDigest.Internal.Type where
 
 import Prelude ()
@@ -12,7 +14,7 @@ import Data.Proxy     (Proxy (..))
 import Data.Semigroup (Semigroup (..))
 import GHC.TypeLits   (KnownNat, Nat, natVal)
 
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 
 -------------------------------------------------------------------------------
 -- TDigest
@@ -21,6 +23,7 @@ import qualified Data.Map as Map
 -- TODO: make newtypes
 type Mean = Double
 type Weight = Double
+type Centroid = (Mean, Weight)
 
 data TDigest (compression :: Nat) = TDigest
     { tdCentroids :: !(Map.Map Mean Weight)
@@ -39,8 +42,6 @@ instance  KnownNat comp => Monoid (TDigest comp) where
 -- Impl
 -------------------------------------------------------------------------------
 
-type Centroid = (Mean, Weight)
-
 emptyTDigest :: TDigest comp
 emptyTDigest = TDigest Map.empty 0
 
@@ -51,13 +52,6 @@ combineDigest
     -> TDigest comp
 combineDigest (TDigest acs an) (TDigest bcs bn) =
     compress $ TDigest (Map.unionWith (+) acs bcs) (an + bn)
-
-insert
-    :: KnownNat comp
-    => Double         -- ^ element
-    -> TDigest comp
-    -> TDigest comp
-insert x = insertCentroid (x, 1)
 
 insertCentroid
     :: forall comp. KnownNat comp
@@ -83,14 +77,15 @@ insertCentroid (x, w) (TDigest centroids count)
 
     compression = fromInteger $ natVal (Proxy :: Proxy comp)
 
+-- | Insert of value, which doesn't have exact centroid in 'TDigest'.
 process
-    :: Double               -- Total weight
-    -> Double
-    -> Map.Map Mean Weight  -- centroids
-    -> Mean                 -- mean
-    -> Weight               -- weight to add
-    -> [Centroid]           -- potential centroids
-    -> Map.Map Mean Weight  -- result is updated centroids
+    :: Double               -- ^ total weight
+    -> Double               -- ^ compression
+    -> Map.Map Mean Weight  -- ^ centroids
+    -> Mean                 -- ^ value/mean
+    -> Weight               -- ^ weight to add
+    -> [Centroid]           -- ^ potential centroids to merge with
+    -> Map.Map Mean Weight  -- ^ result is updated centroids
 process _ _ cs x w []
     | not (w > 0) = cs
     -- no potential centroids anymore, add new one
@@ -103,7 +98,7 @@ process n compression cs x w s0@((x', w') : s1)
     -- If there nothing to add anymore
     | not (w > 0)   = foldr insertPair cs s0
     -- Otherwise adjust centroid, and proceed with the rest
-    | abs ((w + w') - (snd nc + (w - dw))) > 0.001 = error $ show (x, w, w + w', snd nc + (w - dw))
+    -- - | abs ((w + w') - (snd nc + (w - dw))) > 0.001 = error $ show (x, w, w + w', snd nc + (w - dw))
     | otherwise     = process n compression (insertPair nc cs) x (w - dw) s1
   where
     cum = sum $ map snd $ takeWhile ((< x') . fst) $ Map.toList cs
@@ -112,12 +107,7 @@ process n compression cs x w s0@((x', w') : s1)
     dw  = min (thr - w') w
     nc  = combinedCentroid x' w' x dw
 
-notEq :: Double -> Double -> Bool
-notEq a b = abs (a - b) > 0.0001
-
-insertPair :: Ord k => (k, v) -> Map.Map k v -> Map.Map k v
-insertPair (k, v) = Map.insert k v
-
+-- | Add two weighted means together.
 combinedCentroid
     :: Mean -> Weight
     -> Mean -> Weight
@@ -129,7 +119,12 @@ combinedCentroid x w x' w' =
   where
     w'' = w + w'
 
-threshold :: Double -> Double -> Double -> Double
+-- | Calculate the threshold, i.e. maximum weight of centroid.
+threshold
+    :: Double  -- ^ total weight
+    -> Double  -- ^ quantile
+    -> Double  -- ^ compression (1/δ)
+    -> Double
 threshold n q compression = 4 * n * q * (1 - q) / compression
 
 compress :: forall comp. KnownNat comp => TDigest comp -> TDigest comp
@@ -143,7 +138,10 @@ compress td@(TDigest centroids n)
   where
     compression = fromInteger $ natVal (Proxy :: Proxy comp)
 
--- Actually not a shuffle, but deterministic ordering
+-- | Actually not a shuffle, but deterministic ordering,
+-- ordering most full centroids first.
+--
+-- For some reason this approach seems to work.
 shuffle
     :: Double -- ^ Total weight
     -> Double -- ^ compression
@@ -161,6 +159,7 @@ shuffle n compression
         thr   = threshold n q compression
         space = thr - w
 
+-- | Size parameter, /K/. Hard-coded value: 25.
 konst :: Double
 konst = 25
 
@@ -178,3 +177,10 @@ validate td@(TDigest centroids n)
     | otherwise = td
 -}
 
+-------------------------------------------------------------------------------
+-- Utilities
+-------------------------------------------------------------------------------
+
+-- | Insert pair into 'Data.Map.Map'
+insertPair :: Ord k => (k, v) -> Map.Map k v -> Map.Map k v
+insertPair (k, v) = Map.insert k v

@@ -23,12 +23,11 @@ dependencies:
 - base-compat         >=0.6.0    && <0.10
 - containers
 - semigroups
-- QuickCheck
 
 library:
   source-dirs: src
 
-executables:
+benchmarks:
   tdigest-simple:
     source-dirs: bench
     main: Simple.hs
