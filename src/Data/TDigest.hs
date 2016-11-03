@@ -27,7 +27,7 @@ module Data.TDigest (
     HistBin (..),
     -- ** Percentile
     median,
-    percentile,
+    quantile,
     ) where
 
 import Prelude ()

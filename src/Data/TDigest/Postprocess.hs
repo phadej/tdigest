@@ -8,7 +8,7 @@ module Data.TDigest.Postprocess (
     HistBin (..),
     -- * Percentiles
     median,
-    percentile,
+    quantile,
     ) where
 
 import Prelude ()
@@ -53,16 +53,16 @@ histogram (TDigest centroids _) = iter Nothing $ Map.toList centroids
 -- Percentile
 -------------------------------------------------------------------------------
 
--- | Median, i.e. @'percentile' 0.5@.
+-- | Median, i.e. @'quantile' 0.5@.
 median :: TDigest comp -> Maybe Double
-median = percentile 0.5
+median = quantile 0.5
 
--- | Calculate percentile of a specific value.
-percentile
+-- | Calculate quantile of a specific value.
+quantile
     :: Double
     -> TDigest comp
     -> Maybe Double
-percentile q td@(TDigest _centroids n) =
+quantile q td@(TDigest _centroids n) =
     iter 0 $ histogram td
   where
     q' = q * n
