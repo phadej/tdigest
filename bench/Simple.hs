@@ -5,7 +5,7 @@ module Main (main) where
 import Control.Category            (Category)
 import Control.Monad               (join, replicateM, when)
 import Control.Monad.ST            (runST)
-import Control.Parallel.Strategies (parBuffer, rseq, using)
+import Control.Parallel.Strategies (parList, rseq, using)
 import Data.Foldable               (traverse_)
 import Data.List                   (sort)
 import Data.Machine
@@ -76,7 +76,7 @@ actionParser = action
     <*> O.option (O.maybeReader readDistrib) (
         O.short 'd' <> O.long "distrib" <> O.metavar ":distrib" <> O.value DistribUniform)
     <*> O.option O.auto (
-        O.short 's' <> O.long "size" <> O.metavar ":size" <> O.value 100000)
+        O.short 's' <> O.long "size" <> O.metavar ":size" <> O.value 1000000)
   where
     readMethod "naive"    = Just MethodNaive
     readMethod "vector"   = Just MethodVector
@@ -160,14 +160,9 @@ viaSparkingMachine input = join . fmap median <$> runT1 machine
 
 sparking :: (Monad m) => ProcessT m a a
 sparking
-    =  unbuffered
-    <~ mapping (\x -> x `using` parBuffer 4 rseq)
+    =  asParts
+    <~ mapping (\x -> x `using` parList rseq)
     <~ buffered 10
-
-unbuffered :: Monad m => ProcessT m [a] a
-unbuffered = repeatedly $ do
-    xs <- await
-    traverse_ yield xs
 
 counting :: Monad m => ProcessT m a (a, Int)
 counting = myscan f 0
