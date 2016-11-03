@@ -7,12 +7,12 @@ module Data.TDigest.Internal.Ref where
 
 import Prelude ()
 import Prelude.Compat
-import Data.List      (foldl', sortBy, sortOn)
-import Data.Maybe     (maybeToList)
-import Data.Ord       (comparing)
-import Data.Proxy     (Proxy (..))
-import Data.Semigroup (Semigroup (..))
-import GHC.TypeLits   (KnownNat, Nat, natVal)
+import Data.List.Compat (foldl', sortBy, sortOn)
+import Data.Maybe       (maybeToList)
+import Data.Ord         (comparing)
+import Data.Proxy       (Proxy (..))
+import Data.Semigroup   (Semigroup (..))
+import GHC.TypeLits     (KnownNat, Nat, natVal)
 
 import qualified Data.Map.Strict as Map
 
