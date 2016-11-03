@@ -2,11 +2,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Main (main) where
 
-import Control.Category            (Category)
 import Control.Monad               (join, replicateM, when)
 import Control.Monad.ST            (runST)
 import Control.Parallel.Strategies (parList, rseq, using)
-import Data.Foldable               (traverse_)
 import Data.List                   (sort)
 import Data.Machine
 import Data.Machine.Runner         (runT1)
@@ -158,25 +156,16 @@ viaSparkingMachine input = join . fmap median <$> runT1 machine
 -- Machine additions
 -------------------------------------------------------------------------------
 
-sparking :: (Monad m) => ProcessT m a a
+sparking :: Process a a
 sparking
     =  asParts
     <~ mapping (\x -> x `using` parList rseq)
     <~ buffered 10
 
-counting :: Monad m => ProcessT m a (a, Int)
-counting = myscan f 0
+counting :: Process a (a, Int)
+counting = auto countingMealy
   where
-    f n x = (n + 1, (x, n))
-
-myscan :: (Category k, Monad m) => (s -> b -> (s, a)) -> s -> MachineT m (k b) a
-myscan func seed = construct $ go seed
-  where
-    go s = do
-        next <- await
-        let (s', x) = func s next
-        yield x
-        go $! s'
+    countingMealy = unfoldMealy (\i x -> ((x, i), i + 1)) 0
 
 -------------------------------------------------------------------------------
 -- Statistics additions
