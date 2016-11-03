@@ -38,6 +38,12 @@ instance  KnownNat comp => Monoid (TDigest comp) where
     mempty  = emptyTDigest
     mappend = combineDigest
 
+getCentroids :: TDigest comp -> [Centroid]
+getCentroids = Map.toList . tdCentroids
+
+totalWeight :: TDigest comp -> Double
+totalWeight = tdCount
+
 -------------------------------------------------------------------------------
 -- Impl
 -------------------------------------------------------------------------------

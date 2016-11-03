@@ -13,9 +13,6 @@ module Data.TDigest.Postprocess (
 
 import Prelude ()
 import Prelude.Compat
-
-import qualified Data.Map.Strict as Map
-
 import Data.TDigest.Internal.Ref
 
 -------------------------------------------------------------------------------
@@ -31,7 +28,7 @@ data HistBin = HistBin
 
 -- | Calculate histogram based on the 'TDigest'.
 histogram :: TDigest comp -> [HistBin]
-histogram (TDigest centroids _) = iter Nothing $ Map.toList centroids
+histogram = iter Nothing . getCentroids
   where
     -- zero
     iter _ [] = []
@@ -62,10 +59,10 @@ quantile
     :: Double
     -> TDigest comp
     -> Maybe Double
-quantile q td@(TDigest _centroids n) =
+quantile q td =
     iter 0 $ histogram td
   where
-    q' = q * n
+    q' = q * totalWeight td
 
     iter _ []                        = Nothing
     iter _ [HistBin a _b _]          = Just a
