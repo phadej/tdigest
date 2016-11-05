@@ -13,7 +13,7 @@ module Data.TDigest.Postprocess (
 
 import Prelude ()
 import Prelude.Compat
-import Data.TDigest.Internal.Ref
+import Data.TDigest.Internal.Tree
 
 -------------------------------------------------------------------------------
 -- Histogram

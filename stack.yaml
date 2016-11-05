@@ -1,7 +1,6 @@
 resolver: nightly-2016-10-26
 packages:
 - '.'
-extra-deps:
-- optparse-applicative-0.13.0.0
+extra-deps: []
 flags: {}
 extra-package-dbs: []

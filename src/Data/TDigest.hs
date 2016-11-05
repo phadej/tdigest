@@ -28,14 +28,18 @@ module Data.TDigest (
     -- ** Percentile
     median,
     quantile,
+
+    -- * Debug
+    valid,
+    validate,
     ) where
 
 import Prelude ()
 import Prelude.Compat
-import Data.List      (foldl')
-import GHC.TypeLits   (KnownNat)
+import Data.List.Compat (foldl')
+import GHC.TypeLits     (KnownNat)
 
-import Data.TDigest.Internal.Ref
+import Data.TDigest.Internal.Tree
 import Data.TDigest.Postprocess
 
 -------------------------------------------------------------------------------

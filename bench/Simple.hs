@@ -2,18 +2,24 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Main (main) where
 
+import Prelude ()
+import Prelude.Compat
 import Control.Monad               (join, replicateM, when)
 import Control.Monad.ST            (runST)
 import Control.Parallel.Strategies (parList, rseq, using)
+import Data.Foldable               (for_)
 import Data.List                   (sort)
 import Data.Machine
 import Data.Machine.Runner         (runT1)
-import Data.Semigroup              ((<>))
-import Data.Time
+import Data.Monoid                 ((<>))
+import Data.Proxy                  (Proxy (..))
+import Data.Time                   (diffUTCTime, getCurrentTime)
 import Data.Word                   (Word32)
+import GHC.TypeLits                (KnownNat, SomeNat (..), someNatVal)
 import Statistics.Distribution     (ContGen (..))
 
 import Statistics.Distribution.Exponential (exponential)
+import Statistics.Distribution.Gamma       (gammaDistr)
 import Statistics.Distribution.Uniform     (uniformDistr)
 
 import qualified Data.Vector.Algorithms.Intro as Intro
@@ -30,7 +36,8 @@ import Data.TDigest
 -------------------------------------------------------------------------------
 
 data Method
-    = MethodNaive
+    = MethodGuess
+    | MethodNaive
     | MethodVector
     | MethodTDigest
     | MethodTDigestBuffered
@@ -41,6 +48,7 @@ data Distrib
     = DistribIncr
     | DistribUniform
     | DistribExponent
+    | DistribGamma
   deriving (Show)
 
 timed :: Show a => IO a -> IO ()
@@ -51,31 +59,36 @@ timed mx = do
     e <- getCurrentTime
     print (diffUTCTime e s)
 
-action :: Method -> Distrib -> Int -> IO ()
-action m d s = do
-    print (m, d, s)
+action :: Method -> Distrib -> Int -> Int -> IO ()
+action m d s c = do
+    print (m, d, s, c)
     let seed = initSeed (V.singleton 42)
     let input = take s $ case d of
             DistribIncr     -> [1 .. fromIntegral s] -- not sure, but end point prevents floating
             DistribUniform  -> randomStream (uniformDistr 0 1) seed     -- median around 0.5
             DistribExponent -> randomStream (exponential $ log 2) seed  -- median around 1.0
+            DistribGamma    -> randomStream (gammaDistr 0.1 0.1) seed    -- median around .0000593391
     let method = case m of
+          MethodGuess           -> pure . guess
           MethodNaive           -> pure . naiveMedian
           MethodVector          -> pure . vectorMedian
-          MethodTDigest         -> viaMachine
+          MethodTDigest         -> viaMachine c
           MethodTDigestBuffered -> viaBufferedMachine
           MethodTDigestSparking -> viaSparkingMachine
     timed $ method input
 
 actionParser :: O.Parser (IO ())
 actionParser = action
-    <$> O.option (O.maybeReader readMethod) (
+    <$> O.option (maybeReader readMethod) (
         O.short 'm' <> O.long "method" <> O.metavar ":method" <> O.value MethodTDigest)
-    <*> O.option (O.maybeReader readDistrib) (
+    <*> O.option (maybeReader readDistrib) (
         O.short 'd' <> O.long "distrib" <> O.metavar ":distrib" <> O.value DistribUniform)
     <*> O.option O.auto (
         O.short 's' <> O.long "size" <> O.metavar ":size" <> O.value 1000000)
+    <*> O.option O.auto (
+        O.short 'c' <> O.long "compression" <> O.metavar ":comp" <> O.value 20)
   where
+    readMethod "guess"    = Just MethodGuess
     readMethod "naive"    = Just MethodNaive
     readMethod "vector"   = Just MethodVector
     readMethod "digest"   = Just MethodTDigest
@@ -86,7 +99,12 @@ actionParser = action
     readDistrib "incr"     = Just DistribIncr
     readDistrib "uniform"  = Just DistribUniform
     readDistrib "exponent" = Just DistribExponent
+    readDistrib "gamma"    = Just DistribGamma
     readDistrib _          = Nothing
+
+-- Only on optparse-applicative-0.13
+maybeReader :: (String -> Maybe a) -> O.ReadM a
+maybeReader f = O.eitherReader $ \x -> maybe (Left x) Right (f x)
 
 main :: IO ()
 main = join (O.execParser opts)
@@ -97,6 +115,12 @@ main = join (O.execParser opts)
 -------------------------------------------------------------------------------
 -- Methods
 -------------------------------------------------------------------------------
+
+-- Returns the last value, but forces all in between.
+guess :: [Double] -> Maybe Double
+guess []     = Nothing
+guess [x]    = Just x
+guess (x:xs) = x `seq` guess xs
 
 naiveMedian :: [Double] -> Maybe Double
 naiveMedian [] = Nothing
@@ -111,9 +135,27 @@ vectorMedian l
         Intro.sort mv
         Just <$> VU.unsafeRead mv (VU.length mv `div` 2)
 
-viaMachine :: [Double] -> IO (Maybe Double)
-viaMachine input = join . fmap (median :: TDigest 10 -> Maybe Double) <$> runT1 machine
+viaMachine :: Int -> [Double] -> IO (Maybe Double)
+viaMachine compression input = case someNatVal (fromIntegral compression) of
+    Nothing           -> fail "Negative compression"
+    Just (SomeNat cp) -> do
+        mdigest <- fmap validate <$> runT1 machine
+        case mdigest of
+            Nothing             -> return Nothing
+            Just (Left err)     -> fail $ "Validation error: " ++ err
+            Just (Right digest) -> do
+                print $ median $ pd cp digest
+
+                -- Extra: print quantiles
+                for_ ([0.1,0.2..0.9] ++ [0.95,0.99,0.999,0.9999,0.99999]) $ \q ->
+                    print (q, quantile q digest)
+
+                return $ median digest
   where
+    pd :: forall comp. Proxy comp -> TDigest comp -> TDigest comp
+    pd _ x = x
+
+    machine :: forall comp k. KnownNat comp => MachineT IO k (TDigest comp)
     machine
         =  fold (flip insert) mempty
         <~ autoM inputAction
@@ -127,7 +169,7 @@ viaBufferedMachine :: [Double] -> IO (Maybe Double)
 viaBufferedMachine input = join . fmap median <$> runT1 machine
   where
     machine
-        = fold mappend mempty
+        =  fold mappend mempty
         <~ mapping (tdigest :: [Double] -> TDigest 10)
         <~ buffered 10000
         <~ autoM inputAction
@@ -137,6 +179,7 @@ viaBufferedMachine input = join . fmap median <$> runT1 machine
         when (i `mod` 1000000 == 0) $ putStrLn $ "consumed " ++ show i
         return x
 
+-- Sparking machine doesn't count
 viaSparkingMachine :: [Double] -> IO (Maybe Double)
 viaSparkingMachine input = join . fmap median <$> runT1 machine
   where
@@ -145,12 +188,7 @@ viaSparkingMachine input = join . fmap median <$> runT1 machine
         <~ sparking
         <~ mapping (tdigest :: [Double] -> TDigest 10)
         <~ buffered 10000
-        <~ autoM inputAction
-        <~ counting
         <~ source input
-    inputAction (x, i) = do
-        when (i `mod` 1000000 == 0) $ putStrLn $ "consumed " ++ show i
-        return x
 
 -------------------------------------------------------------------------------
 -- Machine additions
