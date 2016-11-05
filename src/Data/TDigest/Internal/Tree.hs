@@ -129,7 +129,7 @@ insertCentroid
     -> TDigest comp
     -> TDigest comp
 insertCentroid (x, w) Nil        = singNode x w
-insertCentroid (mean, weight) td = go 0 mean weight td
+insertCentroid (mean, weight) td = go 0 mean weight False td
   where
     -- New weight of the tree
     n :: Weight
@@ -143,42 +143,47 @@ insertCentroid (mean, weight) td = go 0 mean weight td
         :: Weight        -- weight to the left of this tree
         -> Mean          -- mean to insert
         -> Weight        -- weight to insert
+        -> Bool          -- should insert everything.
+                         -- if we merged somewhere on top, rest is inserted as is
         -> TDigest comp  -- subtree to insert/merge centroid into
         -> TDigest comp
-    go _   newX newW Nil                    = singNode newX newW
-    go cum newX newW (Node s x w tw l r) = case compare newX x of
+    go _   newX newW _ Nil                 = singNode newX newW
+    go cum newX newW e (Node s x w tw l r) = case compare newX x of
         -- Exact match, insert here
         EQ -> Node s x (w + newW) (tw + newW) l r -- node x (w + newW) l r
 
         -- there is *no* room to insert into this node
-        LT | thr <= w -> balanceL x w (go cum newX newW l) r
-        GT | thr <= w -> balanceR x w l (go (cum + totalWeight l + w) newX newW r)
+        LT | thr <= w -> balanceL x w (go cum newX newW e l) r
+        GT | thr <= w -> balanceR x w l (go (cum + totalWeight l + w) newX newW e r)
 
         -- otherwise go left ... or later right
+        LT | e -> balanceL x w (go cum newX newW e l) r
         LT -> case l of
+            -- always create a new node
             Nil -> case mrw of
-                Nothing     -> node' s nx nw (tw + newW) l r
-                Just rw     -> balanceL nx nw (go cum newX rw l) r
+                Nothing     -> node' s nx nw (tw + newW) Nil r
+                Just rw     -> balanceL nx nw (go cum newX rw True Nil) r
             Node _ _ _ _ _ _
                 | lmax < newX && abs (newX - x) < abs (newX - lmax) {- && newX < x -} -> case mrw of
                     Nothing -> node' s nx nw (tw + nw - w) l r
                     -- in this two last LT cases, we have to recalculate size
-                    Just rw -> balanceL nx nw (go cum newX rw l) r
-                | otherwise -> balanceL x w (go cum newX newW l) r
+                    Just rw -> balanceL nx nw (go cum newX rw True l) r
+                | otherwise -> balanceL x w (go cum newX newW e l) r
               where
                 lmax = maximumValue l
 
         -- ... or right
+        GT | e -> balanceR x w l (go (cum + totalWeight l + w) newX newW True r)
         GT -> case r of
             Nil -> case mrw of
-                Nothing     -> node' s nx nw (tw + newW) l r
-                Just rw     -> balanceR nx nw l (go (cum + totalWeight l + nw) newX rw r)
+                Nothing     -> node' s nx nw (tw + newW) l Nil
+                Just rw     -> balanceR nx nw l (go (cum + totalWeight l + nw) newX rw True Nil)
             Node _ _ _ _ _ _
                 | rmin > newX && abs (newX - x) < abs (newX - rmin) {- && newX > x -} -> case mrw of
                     Nothing -> node' s nx nw (tw + newW) l r
                     -- in this two last GT cases, we have to recalculate size
-                    Just rw -> balanceR nx nw l (go (cum + totalWeight l + nw) newX rw r)
-                | otherwise -> balanceR x w l (go (cum + totalWeight l + w) newX newW r)
+                    Just rw -> balanceR nx nw l (go (cum + totalWeight l + nw) newX rw True r)
+                | otherwise -> balanceR x w l (go (cum + totalWeight l + w) newX newW e r)
               where
                 rmin = minimumValue r
       where
@@ -218,7 +223,7 @@ balanceR x w l r
     | size r > balOmega * size l = case r of
         Nil -> error "balanceR: impossible happened"
         (Node _ rx rw _ Nil rr) ->
-            assert (0 < balAlpha * size rr) "balanceR" $
+            -- assert (0 < balAlpha * size rr) "balanceR" $
                 -- single left rotation
                 node rx rw (node x w l Nil) rr
         (Node _ rx rw _ rl rr)
@@ -237,7 +242,7 @@ balanceL x w l r
     | size l > balOmega * size r = case l of
         Nil -> error "balanceL: impossible happened"
         (Node _ lx lw _ ll Nil) ->
-            assert (0 < balAlpha * size ll) "balanceL" $
+            -- assert (0 < balAlpha * size ll) "balanceL" $
                 -- single right rotation
                 node lx lw ll (node x w Nil r)
         (Node _ lx lw _ ll lr)
@@ -289,16 +294,11 @@ compress :: forall comp. KnownNat comp => TDigest comp -> TDigest comp
 compress Nil = Nil
 compress td
     | fromIntegral (size td) > konst * compression
-        = foldl' ins emptyTDigest [0 .. size td - 1]
-    | otherwise =
-         td
+        = foldl' (flip insertCentroid) emptyTDigest $ fmap fst $ VU.toList centroids
+    | otherwise
+        = td
   where
     compression = fromInteger $ natVal (Proxy :: Proxy comp)
-
-    ins :: TDigest comp -> Int -> TDigest comp
-    ins td' i =
-        let (centroid, _) = VU.unsafeIndex centroids i
-        in insertCentroid centroid td'
 
     -- Centroids are shuffled based on space
     centroids :: VU.Vector (Centroid, Double)
@@ -315,17 +315,14 @@ toMVector
     -> ST s (VU.MVector s (Centroid, Double)) -- ^ return also a "space left in the centroid" value for "shuffling"
 toMVector td = do
     v <- MVU.new (size td)
-    go v (0 :: Int) td
-    pure v
+    (i, cum) <- go v (0 :: Int) (0 :: Double) td
+    pure $ assert (i == size td && abs (cum - totalWeight td) < 1e-6) "traversal in toMVector:" v
   where
-    go _ _ Nil                   = pure ()
-    go v i (Node _ x w tw Nil r) = do
-        MVU.unsafeWrite v i ((x, w), space w tw)
-        go v (i + 1) r
-    go v i (Node _ x w tw l@(Node ls _ _ _ _ _) r) = do
-        MVU.unsafeWrite v (i + ls) ((x, w), space w tw)
-        go v i l
-        go v (i + ls + 1) r
+    go _ i cum Nil                   = pure (i, cum)
+    go v i cum (Node _ x w _ l r) = do
+        (i', cum') <- go v i cum l
+        MVU.unsafeWrite v i' ((x, w), space w cum')
+        go v (i' + 1) (cum' + w) r
 
     n = totalWeight td
     compression = fromInteger $ natVal (Proxy :: Proxy comp)
