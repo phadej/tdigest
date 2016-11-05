@@ -12,6 +12,9 @@
 -- >>> median (tdigest [1..100] :: TDigest 10)
 -- Just 50.5
 --
+-- >>> median (tdigest [1..100] :: TDigest 3)
+-- Just 49.098408814428936
+--
 module Data.TDigest (
     -- * Construction
     TDigest,
@@ -24,6 +27,7 @@ module Data.TDigest (
 
     -- * Compression
     compress,
+    forceCompress,
 
     -- * Statistics
     -- ** Histogram
@@ -64,7 +68,7 @@ tdigest = foldl' insertChunk emptyTDigest . chunks . toList
 
     chunks [] = []
     chunks xs =
-        let (a, b) = splitAt 1000 xs
+        let (a, b) = splitAt 1000 xs -- 1000 is totally arbitrary.
         in a : chunks b
 
 -- | Insert single value into 'TDigest'.
@@ -77,8 +81,8 @@ insert x = compress . insert' x
 
 -- | Insert single value, don't compress 'TDigest' even if needed.
 --
--- For sensibly bounded input, it make sense to let 'TDigest' grow (it might
--- grow linearly), and then compress it once.
+-- For sensibly bounded input, it makes sense to let 'TDigest' grow (it might
+-- grow linearly in size), and after that compress it once.
 insert'
     :: KnownNat comp
     => Double         -- ^ element

@@ -6,7 +6,7 @@ module Data.TDigest.Postprocess (
     -- * Histogram
     histogram,
     HistBin (..),
-    -- * Percentiles
+    -- * Quantiles
     median,
     quantile,
     ) where
@@ -19,9 +19,10 @@ import Data.TDigest.Internal.Tree
 -- Histogram
 -------------------------------------------------------------------------------
 
+-- | Histogram bin
 data HistBin = HistBin
     { hbMin    :: !Double  -- ^ lower bound
-    , hbMax    :: !Double  -- ^ max bound
+    , hbMax    :: !Double  -- ^ upper bound
     , hbWeight :: !Double  -- ^ weight ("area" of the bar)
     }
   deriving (Show)
@@ -47,7 +48,7 @@ histogram = iter Nothing . getCentroids
     mid a b = (a + b) / 2
 
 -------------------------------------------------------------------------------
--- Percentile
+-- Quantile
 -------------------------------------------------------------------------------
 
 -- | Median, i.e. @'quantile' 0.5@.

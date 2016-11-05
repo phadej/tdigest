@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 -- | Internals of 'TDigest'.
 --
--- Based on /Adams’ Trees Revisited/ by Milan Straka
+-- Tree implementation is based on /Adams’ Trees Revisited/ by Milan Straka
 -- <http://fox.ucw.cz/papers/bbtree/bbtree.pdf>
 module Data.TDigest.Internal.Tree where
 
@@ -39,7 +39,8 @@ type Size = Int
 
 -- | 'TDigest' is a tree of centroids.
 --
--- /TODO/ add singleton node?
+-- @compression@ is a @1/δ@. The greater the value of @compression@ the less
+-- likely value merging will happen.
 data TDigest (compression :: Nat)
     -- | Tree node
     = Node
@@ -57,6 +58,15 @@ data TDigest (compression :: Nat)
 --
 -- We tried it, but it seems the alloc/update cost is bigger than
 -- re-calculating them on need (it's O(log n) - calculation!)
+
+-- [Note: singleton node]
+-- We tried to add one, but haven't seen change in performance
+
+-- [Note: inlining balanceR and balanceL]
+-- We probably can squueze some performance by making
+-- 'balanceL' and 'balanceR' check arguments only once (like @containers@ do)
+-- and not use 'node' function.
+-- *But*, the benefit vs. code explosion is not yet worth.
 
 instance KnownNat comp => Semigroup (TDigest comp) where
     (<>) = combineDigest
@@ -290,16 +300,25 @@ threshold n q compression = 4 * n * q * (1 - q) / compression
 --
 -- Reinsert the centroids in "better" order (in original paper: in random)
 -- so they have opportunity to merge.
+--
+-- Compression will happen only if size is both:
+-- bigger than @'relMaxSize' * comp@ and bigger than 'absMaxSize.
 compress :: forall comp. KnownNat comp => TDigest comp -> TDigest comp
 compress Nil = Nil
 compress td
-    | fromIntegral (size td) > konst * compression
-        = foldl' (flip insertCentroid) emptyTDigest $ fmap fst $ VU.toList centroids
+    | size td > relMaxSize * compression && size td > absMaxSize
+        = forceCompress td
     | otherwise
         = td
   where
     compression = fromInteger $ natVal (Proxy :: Proxy comp)
 
+-- | Perform compression, even if current size says it's not necessary.
+forceCompress :: forall comp. KnownNat comp => TDigest comp -> TDigest comp
+forceCompress Nil = Nil
+forceCompress td =
+    foldl' (flip insertCentroid) emptyTDigest $ fmap fst $ VU.toList centroids
+  where
     -- Centroids are shuffled based on space
     centroids :: VU.Vector (Centroid, Double)
     centroids = runST $ do
@@ -336,9 +355,13 @@ toMVector td = do
 -- Params
 -------------------------------------------------------------------------------
 
--- | Size parameter, /K/. Hard-coded value: 25.
-konst :: Double
-konst = 25
+-- | Relative size parameter. Hard-coded value: 25.
+relMaxSize :: Int
+relMaxSize = 25
+
+-- | Absolute size parameter. Hard-coded value: 1000.
+absMaxSize :: Int
+absMaxSize = 1000
 
 -------------------------------------------------------------------------------
 -- Tree balance parameters
@@ -356,10 +379,11 @@ balAlpha = 2
 -- Debug
 -------------------------------------------------------------------------------
 
+-- | @'isRight' . 'validate'@
 valid :: TDigest comp -> Bool
 valid = isRight . validate
 
--- | Check various invariants in the tree
+-- | Check various invariants in the 'TDigest' tree.
 validate :: TDigest comp -> Either String (TDigest comp)
 validate td
     | not (all sizeValid   centroids) = Left "invalid sizes"
