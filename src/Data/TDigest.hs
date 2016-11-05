@@ -20,6 +20,10 @@ module Data.TDigest (
     -- ** Population
     singleton,
     insert,
+    insert',
+
+    -- * Compression
+    compress,
 
     -- * Statistics
     -- ** Histogram
@@ -36,6 +40,7 @@ module Data.TDigest (
 
 import Prelude ()
 import Prelude.Compat
+import Data.Foldable    (toList)
 import Data.List.Compat (foldl')
 import GHC.TypeLits     (KnownNat)
 
@@ -52,7 +57,15 @@ singleton x = insert x emptyTDigest
 
 -- | Strict 'foldl'' over 'Foldable' structure.
 tdigest :: (Foldable f, KnownNat comp) => f Double -> TDigest comp
-tdigest = foldl' (flip insert) emptyTDigest
+tdigest = foldl' insertChunk emptyTDigest . chunks . toList
+  where
+    insertChunk td xs =
+        foldl' (flip insert') td xs
+
+    chunks [] = []
+    chunks xs =
+        let (a, b) = splitAt 1000 xs
+        in a : chunks b
 
 -- | Insert single value into 'TDigest'.
 insert
@@ -60,4 +73,15 @@ insert
     => Double         -- ^ element
     -> TDigest comp
     -> TDigest comp
-insert x = compress . insertCentroid (x, 1)
+insert x = compress . insert' x
+
+-- | Insert single value, don't compress 'TDigest' even if needed.
+--
+-- For sensibly bounded input, it make sense to let 'TDigest' grow (it might
+-- grow linearly), and then compress it once.
+insert'
+    :: KnownNat comp
+    => Double         -- ^ element
+    -> TDigest comp
+    -> TDigest comp
+insert' x = insertCentroid (x, 1)

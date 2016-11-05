@@ -1,10 +1,11 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Main (main) where
 
 import Prelude ()
 import Prelude.Compat
-import Control.Monad               (join, replicateM, when)
+import Control.Monad               (join, replicateM)
 import Control.Monad.ST            (runST)
 import Control.Parallel.Strategies (parList, rseq, using)
 import Data.Foldable               (for_)
@@ -30,13 +31,12 @@ import qualified System.Random.MWC            as MWC
 
 import Data.TDigest
 
-
 -------------------------------------------------------------------------------
 -- Data
 -------------------------------------------------------------------------------
 
 data Method
-    = MethodGuess
+    = MethodAverage
     | MethodNaive
     | MethodVector
     | MethodTDigest
@@ -69,18 +69,23 @@ action m d s c = do
             DistribExponent -> randomStream (exponential $ log 2) seed  -- median around 1.0
             DistribGamma    -> randomStream (gammaDistr 0.1 0.1) seed    -- median around .0000593391
     let method = case m of
-          MethodGuess           -> pure . guess
+          MethodAverage         -> pure . average
           MethodNaive           -> pure . naiveMedian
           MethodVector          -> pure . vectorMedian
-          MethodTDigest         -> viaMachine c
-          MethodTDigestBuffered -> viaBufferedMachine
-          MethodTDigestSparking -> viaSparkingMachine
+          MethodTDigest         -> reifyNat c tdigestMachine
+          MethodTDigestBuffered -> reifyNat c tdigestBufferedMachine
+          MethodTDigestSparking -> reifyNat c tdigestSparkingMachine
     timed $ method input
+
+reifyNat :: forall x. Int -> (forall n. KnownNat n => Proxy n -> x) -> x
+reifyNat n f = case someNatVal (fromIntegral n) of
+    Nothing           -> error "Negative m"
+    Just (SomeNat cp) -> f cp
 
 actionParser :: O.Parser (IO ())
 actionParser = action
     <$> O.option (maybeReader readMethod) (
-        O.short 'm' <> O.long "method" <> O.metavar ":method" <> O.value MethodTDigest)
+        O.short 'm' <> O.long "method" <> O.metavar ":method" <> O.value MethodTDigestBuffered)
     <*> O.option (maybeReader readDistrib) (
         O.short 'd' <> O.long "distrib" <> O.metavar ":distrib" <> O.value DistribUniform)
     <*> O.option O.auto (
@@ -88,7 +93,7 @@ actionParser = action
     <*> O.option O.auto (
         O.short 'c' <> O.long "compression" <> O.metavar ":comp" <> O.value 20)
   where
-    readMethod "guess"    = Just MethodGuess
+    readMethod "average"    = Just MethodAverage
     readMethod "naive"    = Just MethodNaive
     readMethod "vector"   = Just MethodVector
     readMethod "digest"   = Just MethodTDigest
@@ -116,11 +121,12 @@ main = join (O.execParser opts)
 -- Methods
 -------------------------------------------------------------------------------
 
--- Returns the last value, but forces all in between.
-guess :: [Double] -> Maybe Double
-guess []     = Nothing
-guess [x]    = Just x
-guess (x:xs) = x `seq` guess xs
+average :: [Double] -> Maybe Double
+average []     = Nothing
+average (x:xs) = Just $ go x 1 xs
+  where
+    go z _ []       = z
+    go z n (y : ys) = go ((z * n + y) / (n + 1)) (n + 1) ys
 
 naiveMedian :: [Double] -> Maybe Double
 naiveMedian [] = Nothing
@@ -135,60 +141,63 @@ vectorMedian l
         Intro.sort mv
         Just <$> VU.unsafeRead mv (VU.length mv `div` 2)
 
-viaMachine :: Int -> [Double] -> IO (Maybe Double)
-viaMachine compression input = case someNatVal (fromIntegral compression) of
-    Nothing           -> fail "Negative compression"
-    Just (SomeNat cp) -> do
-        mdigest <- fmap validate <$> runT1 machine
-        case mdigest of
-            Nothing             -> return Nothing
-            Just (Left err)     -> fail $ "Validation error: " ++ err
-            Just (Right digest) -> do
-                print $ median $ pd cp digest
-
-                -- Extra: print quantiles
-                for_ ([0.1,0.2..0.9] ++ [0.95,0.99,0.999,0.9999,0.99999]) $ \q ->
-                    print (q, quantile q digest)
-
-                return $ median digest
+tdigestMachine :: forall comp. KnownNat comp => Proxy comp -> [Double] -> IO (Maybe Double)
+tdigestMachine _ input = do
+    mdigest <- fmap validate <$> runT1 machine
+    case mdigest of
+        Nothing             -> return Nothing
+        Just (Left err)     -> fail $ "Validation error: " ++ err
+        Just (Right digest) -> do
+            printStats digest
+            return $ median digest
   where
-    pd :: forall comp. Proxy comp -> TDigest comp -> TDigest comp
-    pd _ x = x
-
-    machine :: forall comp k. KnownNat comp => MachineT IO k (TDigest comp)
+    machine :: MachineT IO k (TDigest comp)
     machine
         =  fold (flip insert) mempty
-        <~ autoM inputAction
-        <~ counting
         <~ source input
-    inputAction (x, i) = do
-        when (i `mod` 1000000 == 0) $ putStrLn $ "consumed " ++ show i
-        return x
 
-viaBufferedMachine :: [Double] -> IO (Maybe Double)
-viaBufferedMachine input = join . fmap median <$> runT1 machine
+tdigestBufferedMachine :: forall comp. KnownNat comp => Proxy comp -> [Double] -> IO (Maybe Double)
+tdigestBufferedMachine _ input = do
+    mdigest <- fmap validate <$> runT1 machine
+    case mdigest of
+        Nothing             -> return Nothing
+        Just (Left err)     -> fail $ "Validation error: " ++ err
+        Just (Right digest) -> do
+            printStats digest
+            return $ median digest
   where
+    machine :: MachineT IO k (TDigest comp)
     machine
         =  fold mappend mempty
-        <~ mapping (tdigest :: [Double] -> TDigest 10)
+        <~ mapping tdigest
         <~ buffered 10000
-        <~ autoM inputAction
-        <~ counting
         <~ source input
-    inputAction (x, i) = do
-        when (i `mod` 1000000 == 0) $ putStrLn $ "consumed " ++ show i
-        return x
 
 -- Sparking machine doesn't count
-viaSparkingMachine :: [Double] -> IO (Maybe Double)
-viaSparkingMachine input = join . fmap median <$> runT1 machine
+tdigestSparkingMachine :: forall comp. KnownNat comp => Proxy comp -> [Double] -> IO (Maybe Double)
+tdigestSparkingMachine _ input = do
+    mdigest <- fmap validate <$> runT1 machine
+    case mdigest of
+        Nothing             -> return Nothing
+        Just (Left err)     -> fail $ "Validation error: " ++ err
+        Just (Right digest) -> do
+            printStats digest
+            return $ median digest
   where
+    machine :: MachineT IO k (TDigest comp)
     machine
         =  fold mappend mempty
         <~ sparking
-        <~ mapping (tdigest :: [Double] -> TDigest 10)
+        <~ mapping tdigest
         <~ buffered 10000
         <~ source input
+
+printStats :: TDigest comp -> IO ()
+printStats digest = do
+    -- Extra: print quantiles
+    putStrLn "quantiles"
+    for_ ([0.1,0.2..0.9] ++ [0.95,0.99,0.999,0.9999,0.99999]) $ \q ->
+        putStrLn $ show q ++ ":" ++ show (quantile q digest)
 
 -------------------------------------------------------------------------------
 -- Machine additions
@@ -199,11 +208,6 @@ sparking
     =  asParts
     <~ mapping (\x -> x `using` parList rseq)
     <~ buffered 10
-
-counting :: Process a (a, Int)
-counting = auto countingMealy
-  where
-    countingMealy = unfoldMealy (\i x -> ((x, i), i + 1)) 0
 
 -------------------------------------------------------------------------------
 -- Statistics additions
