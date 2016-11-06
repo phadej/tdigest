@@ -48,7 +48,7 @@ benchmarks:
     dependencies:
       - tdigest
       - machines             >=0.6.1    && <0.7
-      - parallel             >=3.2.1.0  && <3.3
+      - parallel             >=3.2.0.6  && <3.3
       - mwc-random           >=0.13.4.0 && <0.14
       - statistics           >=0.13.3.0 && <0.14
       - time                 >=1.4.2    && <1.7
