@@ -38,6 +38,7 @@ module Data.TDigest (
     quantile,
     -- ** CDF
     cdf,
+    icdf,
 
     -- * Debug
     valid,

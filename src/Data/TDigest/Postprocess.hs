@@ -11,6 +11,7 @@ module Data.TDigest.Postprocess (
     quantile,
     -- * CDF
     cdf,
+    icdf,
     ) where
 
 import Prelude ()
@@ -60,10 +61,7 @@ median :: TDigest comp -> Maybe Double
 median = quantile 0.5
 
 -- | Calculate quantile of a specific value.
-quantile
-    :: Double
-    -> TDigest comp
-    -> Maybe Double
+quantile :: Double -> TDigest comp -> Maybe Double
 quantile q td =
     iter $ histogram td
   where
@@ -74,6 +72,10 @@ quantile q td =
     iter (HistBin a b w t : rest)
         | {- t < q' && -} q' < t + w = Just $ a + (b - a) * (q' - t) / w
         | otherwise                  = iter rest
+
+-- | Alias of 'quantile'.
+icdf :: Double -> TDigest comp -> Maybe Double
+icdf = quantile
 
 -------------------------------------------------------------------------------
 -- CDF - cumulative distribution function
