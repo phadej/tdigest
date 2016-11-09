@@ -91,7 +91,7 @@ instance KnownNat comp => Binary (TDigest comp) where
 getCentroids :: TDigest comp -> [Centroid]
 getCentroids = ($ []) . go
   where
-    go Nil                    = id
+    go Nil                = id
     go (Node _ x w _ l r) = go l . ((x,w) : ) . go r
 
 totalWeight :: TDigest comp -> Double
