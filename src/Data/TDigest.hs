@@ -36,6 +36,8 @@ module Data.TDigest (
     -- ** Percentile
     median,
     quantile,
+    -- ** CDF
+    cdf,
 
     -- * Debug
     valid,

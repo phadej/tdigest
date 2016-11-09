@@ -198,6 +198,9 @@ printStats digest = do
     putStrLn "quantiles"
     for_ ([0.1,0.2..0.9] ++ [0.95,0.99,0.999,0.9999,0.99999]) $ \q ->
         putStrLn $ show q ++ ":" ++ show (quantile q digest)
+    putStrLn "cdf"
+    for_ ([0, 0.25, 0.5, 1, 2]) $ \x ->
+        putStrLn $ show x ++ ": " ++ show (cdf x digest)
 
 -------------------------------------------------------------------------------
 -- Machine additions

@@ -9,6 +9,8 @@ module Data.TDigest.Postprocess (
     -- * Quantiles
     median,
     quantile,
+    -- * CDF
+    cdf,
     ) where
 
 import Prelude ()
@@ -21,29 +23,31 @@ import Data.TDigest.Internal.Tree
 
 -- | Histogram bin
 data HistBin = HistBin
-    { hbMin    :: !Double  -- ^ lower bound
-    , hbMax    :: !Double  -- ^ upper bound
-    , hbWeight :: !Double  -- ^ weight ("area" of the bar)
+    { hbMin       :: !Double  -- ^ lower bound
+    , hbMax       :: !Double  -- ^ upper bound
+    , hbWeight    :: !Double  -- ^ weight ("area" of the bar)
+    , hbCumWeight :: !Double  -- ^ weight from the right
     }
   deriving (Show)
 
 -- | Calculate histogram based on the 'TDigest'.
 histogram :: TDigest comp -> [HistBin]
-histogram = iter Nothing . getCentroids
+histogram = iter Nothing 0 . getCentroids
   where
     -- zero
-    iter _ [] = []
+    iter :: Maybe (Mean, Weight) -> Weight -> [(Mean, Weight)] -> [HistBin]
+    iter _ _ [] = []
     -- one
-    iter Nothing [(x, w)] = [HistBin x x w]
+    iter Nothing t [(x, w)] = [HistBin x x w t]
     -- first
-    iter Nothing (c1@(x1, w1) : rest@((x2, _) : _))
-        = HistBin x1 (mid x1 x2) w1 : iter (Just c1) rest
+    iter Nothing t (c1@(x1, w1) : rest@((x2, _) : _))
+        = HistBin x1 (mid x1 x2) w1 t : iter (Just c1) (t + w1) rest
     -- middle
-    iter (Just (x0, _)) (c1@(x1, w1) : rest@((x2, _) : _))
-        = HistBin (mid x0 x1) (mid x1 x2) w1 : iter (Just c1) rest
+    iter (Just (x0, _)) t (c1@(x1, w1) : rest@((x2, _) : _))
+        = HistBin (mid x0 x1) (mid x1 x2) w1 t: iter (Just c1) (t + w1) rest
     -- last
-    iter (Just (x0, _)) [(x1, w1)]
-        = [HistBin (mid x0 x1) x1 w1]
+    iter (Just (x0, _)) t [(x1, w1)]
+        = [HistBin (mid x0 x1) x1 w1 t]
 
     mid a b = (a + b) / 2
 
@@ -61,12 +65,32 @@ quantile
     -> TDigest comp
     -> Maybe Double
 quantile q td =
-    iter 0 $ histogram td
+    iter $ histogram td
   where
     q' = q * totalWeight td
 
-    iter _ []                        = Nothing
-    iter _ [HistBin a _b _]          = Just a
-    iter t (HistBin a b w : rest)
+    iter []                          = Nothing
+    iter [HistBin a b w t]           = Just $ a + (b - a) * (q' - t) / w
+    iter (HistBin a b w t : rest)
         | {- t < q' && -} q' < t + w = Just $ a + (b - a) * (q' - t) / w
-        | otherwise                  = iter (t + w) rest
+        | otherwise                  = iter rest
+
+-------------------------------------------------------------------------------
+-- CDF - cumulative distribution function
+-------------------------------------------------------------------------------
+
+-- | Cumulative distribution function.
+--
+-- /Note:/ if this is the only thing you need, it's more efficient to count
+-- this directly.
+cdf :: Double -> TDigest comp -> Double
+cdf x td = 
+    iter $ histogram td
+  where
+    n = totalWeight td
+
+    iter [] = 1
+    iter (HistBin a b w t : rest)
+        | x < a     = 0
+        | x < b     = (t + w * (x - a) / (b - a)) / n
+        | otherwise = iter rest
