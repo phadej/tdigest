@@ -37,7 +37,7 @@ library
     , deepseq             >=1.3.0.2  && <1.5
     , binary              >=0.7.1.0  && <0.9
     , semigroups          >=0.18.2   && <0.19
-    , vector              >=0.11     && <0.12
+    , vector              >=0.11     && <0.13
     , vector-algorithms   >=0.7.0.1  && <0.8
   exposed-modules:
       Data.TDigest
@@ -52,13 +52,13 @@ test-suite tdigest-tests
       tests
   ghc-options: -Wall
   build-depends:
-      base                >=4.7      && <4.10
-    , base-compat         >=0.9.1    && <0.10
-    , deepseq             >=1.3.0.2  && <1.5
-    , binary              >=0.7.1.0  && <0.9
-    , semigroups          >=0.18.2   && <0.19
-    , vector              >=0.11     && <0.12
-    , vector-algorithms   >=0.7.0.1  && <0.8
+      base
+    , base-compat
+    , deepseq
+    , binary
+    , semigroups
+    , vector
+    , vector-algorithms
     , base
     , tdigest
     , tasty            >=0.11.0.4 && <0.12
@@ -72,18 +72,18 @@ benchmark tdigest-simple
       bench
   ghc-options: -Wall -threaded
   build-depends:
-      base                >=4.7      && <4.10
-    , base-compat         >=0.9.1    && <0.10
-    , deepseq             >=1.3.0.2  && <1.5
-    , binary              >=0.7.1.0  && <0.9
-    , semigroups          >=0.18.2   && <0.19
-    , vector              >=0.11     && <0.12
-    , vector-algorithms   >=0.7.0.1  && <0.8
+      base
+    , base-compat
+    , deepseq
+    , binary
+    , semigroups
+    , vector
+    , vector-algorithms
     , tdigest
     , machines             >=0.6.1    && <0.7
     , parallel             >=3.2.0.6  && <3.3
     , mwc-random           >=0.13.4.0 && <0.14
     , statistics           >=0.13.3.0 && <0.14
-    , time                 >=1.4.2    && <1.7
+    , time                 >=1.4.2    && <1.8
     , optparse-applicative >=0.12.1.0 && <0.14
   default-language: Haskell2010
