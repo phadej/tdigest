@@ -110,12 +110,14 @@ size :: TDigest comp -> Int
 size Nil                    = 0
 size (Node s _ _ _ _ _) = s
 
+-- | Center of left-most centroid.
 minimumValue :: TDigest comp -> Mean
 minimumValue = go posInf
   where
     go  acc Nil                    = acc
     go _acc (Node _ x _ _ l _) = go x l
 
+-- | Center of right-most centroid.
 maximumValue :: TDigest comp -> Mean
 maximumValue = go negInf
   where

@@ -30,6 +30,9 @@ module Data.TDigest (
     forceCompress,
 
     -- * Statistics
+    totalWeight,
+    minimumValue,
+    maximumValue,
     -- ** Histogram
     histogram,
     HistBin (..),
