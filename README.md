@@ -24,6 +24,9 @@ Using 50M exponentially distributed numbers:
 
 ### Example histogram
 
-`tdigest-simple -m tdigest -d standard -s 100000 -c 10 -o output.svg -i 34`
+```
+tdigest-simple -m tdigest -d standard -s 100000 -c 10 -o output.svg -i 34
+inkscape --export-png=example.png --export-dpi=80 --export-background-opacity=0 --without-gui example.svg
+```
 
-![Example](example.svg)
+![Example](https://raw.githubusercontent.com/futurice/haskell-tdigest/master/example.png)
