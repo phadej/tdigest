@@ -14,6 +14,7 @@ import Control.DeepSeq        (NFData (..))
 import Control.Monad.ST       (ST, runST)
 import Data.Binary            (Binary (..))
 import Data.Either            (isRight)
+import Data.Foldable          (toList)
 import Data.List.Compat       (foldl')
 import Data.Ord               (comparing)
 import Data.Proxy             (Proxy (..))
@@ -102,6 +103,11 @@ getCentroids = ($ []) . go
     go Nil                = id
     go (Node _ x w _ l r) = go l . ((x,w) : ) . go r
 
+-- | Total count of samples.
+--
+-- >>> totalWeight (tdigest [1..100] :: TDigest 3)
+-- 100.0
+--
 totalWeight :: TDigest comp -> Double
 totalWeight Nil                 = 0
 totalWeight (Node _ _ _ tw _ _) = tw
@@ -110,14 +116,22 @@ size :: TDigest comp -> Int
 size Nil                    = 0
 size (Node s _ _ _ _ _) = s
 
--- | Center of left-most centroid.
+-- | Center of left-most centroid. Note: may be different than min element inserted.
+--
+-- >>> minimumValue (tdigest [1..100] :: TDigest 3)
+-- 1.0
+--
 minimumValue :: TDigest comp -> Mean
 minimumValue = go posInf
   where
     go  acc Nil                    = acc
     go _acc (Node _ x _ _ l _) = go x l
 
--- | Center of right-most centroid.
+-- | Center of right-most centroid. Note: may be different than max element inserted.
+--
+-- >>> maximumValue (tdigest [1..100] :: TDigest 3)
+-- 99.0
+--
 maximumValue :: TDigest comp -> Mean
 maximumValue = go negInf
   where
@@ -312,7 +326,8 @@ threshold n q compression = 4 * n * q * (1 - q) / compression
 -- so they have opportunity to merge.
 --
 -- Compression will happen only if size is both:
--- bigger than @'relMaxSize' * comp@ and bigger than 'absMaxSize.
+-- bigger than @'relMaxSize' * comp@ and bigger than 'absMaxSize'.
+--
 compress :: forall comp. KnownNat comp => TDigest comp -> TDigest comp
 compress Nil = Nil
 compress td
@@ -463,3 +478,19 @@ insert' x = insertCentroid (x, 1)
 -- | Make a 'TDigest' of a single data point.
 singleton :: KnownNat comp => Double -> TDigest comp
 singleton x = insert x emptyTDigest
+
+-- | Strict 'foldl'' over 'Foldable' structure.
+tdigest :: (Foldable f, KnownNat comp) => f Double -> TDigest comp
+tdigest = forceCompress . foldl' insertChunk emptyTDigest . chunks . toList
+  where
+    -- compress after each chunk, forceCompress at the very end.
+    insertChunk td xs =
+        compress (foldl' (flip insert') td xs)
+
+    chunks [] = []
+    chunks xs =
+        let (a, b) = splitAt 1000 xs -- 1000 is totally arbitrary.
+        in a : chunks b
+
+-- $setup
+-- >>> :set -XDataKinds
