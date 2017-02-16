@@ -1,6 +1,6 @@
 name:           tdigest
 version:        0
-synopsis:       On-line accumulation of rank-based statistics such as quantiles and trimmed means
+synopsis:       On-line accumulation of rank-based statistics
 description:    A new data structure for accurate on-line accumulation of rank-based statistics such as quantiles and trimmed means.
                 .
                 See original paper: "Computing extremely accurate quantiles using t-digest" by Ted Dunning and Otmar Ertl
