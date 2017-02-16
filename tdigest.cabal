@@ -1,7 +1,3 @@
--- This file has been generated from package.yaml by hpack version 0.14.1.
---
--- see: https://github.com/sol/hpack
-
 name:           tdigest
 version:        0
 synopsis:       On-line accumulation of rank-based statistics such as quantiles and trimmed means
@@ -16,8 +12,8 @@ author:         Oleg Grenrus <oleg.grenrus@iki.fi>
 maintainer:     Oleg Grenrus <oleg.grenrus@iki.fi>
 license:        BSD3
 license-file:   LICENSE
-tested-with:    GHC==7.8.4, GHC==7.10.3, GHC==8.0.1
-build-type:     Simple
+tested-with:    GHC==7.8.4, GHC==7.10.3, GHC==8.0.1, GHC==8.0.2
+build-type:     Custom
 cabal-version:  >= 1.10
 
 extra-source-files:
@@ -26,6 +22,12 @@ extra-source-files:
 source-repository head
   type: git
   location: https://github.com/futurice/haskell-tdigest
+
+custom-setup
+  setup-depends:
+    base          >=4.5 && <5,
+    Cabal         >=1.14,
+    cabal-doctest >=1 && <1.1
 
 library
   hs-source-dirs:
@@ -52,24 +54,37 @@ library
       ScopedTypeVariables
 
 test-suite tdigest-tests
-  type: exitcode-stdio-1.0
-  main-is: Tests.hs
-  hs-source-dirs:
-      tests
-  ghc-options: -Wall
-  build-depends:
-      base
-    , base-compat
-    , deepseq
-    , binary
-    , semigroups
-    , vector
-    , vector-algorithms
-    , base
-    , tdigest
-    , tasty            >=0.11.0.4 && <0.12
-    , tasty-quickcheck >=0.8.4    && <0.9
   default-language: Haskell2010
+  type:             exitcode-stdio-1.0
+  main-is:          Tests.hs
+  ghc-options:      -Wall -threaded
+  hs-source-dirs:   tests
+
+  build-depends:
+    base,
+    tdigest,
+    base-compat,
+    deepseq,
+    binary,
+    semigroups,
+    vector,
+    vector-algorithms,
+    tasty            >=0.11.0.4 && <0.12,
+    tasty-quickcheck >=0.8.4    && <0.9
+
+test-suite doctests
+  default-language: Haskell2010
+  type:             exitcode-stdio-1.0
+  main-is:          doctests.hs
+  ghc-options:      -Wall -threaded
+  hs-source-dirs:   tests
+
+  build-depends:
+    base,
+    bytes,
+    directory      >=1.0,
+    doctest        >=0.11.1 && <0.12,
+    filepath       >=1.2
 
 benchmark tdigest-simple
   type: exitcode-stdio-1.0
@@ -79,13 +94,13 @@ benchmark tdigest-simple
   ghc-options: -Wall -threaded
   build-depends:
       base
+    , tdigest
     , base-compat
     , deepseq
     , binary
     , semigroups
     , vector
     , vector-algorithms
-    , tdigest
     , machines             >=0.6.1    && <0.7
     , parallel             >=3.2.0.6  && <3.3
     , mwc-random           >=0.13.4.0 && <0.14

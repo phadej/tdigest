@@ -9,11 +9,11 @@
 --
 -- === Examples
 --
--- >>> median (tdigest [1..100] :: TDigest 10)
--- Just 50.5
+-- >>> median (tdigest [1..100] :: TDigest 25)
+-- Just 51...
 --
 -- >>> median (tdigest [1..100] :: TDigest 3)
--- Just 49.098408814428936
+-- Just 60...
 --
 module Data.TDigest (
     -- * Construction
@@ -53,6 +53,9 @@ import GHC.TypeLits     (KnownNat)
 
 import Data.TDigest.Internal.Tree
 import Data.TDigest.Postprocess
+
+-- $setup
+-- >>> :set -XDataKinds
 
 -------------------------------------------------------------------------------
 -- Functions
