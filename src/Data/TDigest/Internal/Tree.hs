@@ -1,6 +1,7 @@
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE KindSignatures      #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE KindSignatures        #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 -- | Internals of 'TDigest'.
 --
 -- Tree implementation is based on /Adams’ Trees Revisited/ by Milan Straka
@@ -9,15 +10,17 @@ module Data.TDigest.Internal.Tree where
 
 import Prelude ()
 import Prelude.Compat
-import Control.DeepSeq  (NFData (..))
-import Control.Monad.ST (ST, runST)
-import Data.Binary      (Binary (..))
-import Data.Either      (isRight)
-import Data.List.Compat (foldl')
-import Data.Ord         (comparing)
-import Data.Proxy       (Proxy (..))
-import Data.Semigroup   (Semigroup (..))
-import GHC.TypeLits     (KnownNat, Nat, natVal)
+import Control.DeepSeq        (NFData (..))
+import Control.Monad.ST       (ST, runST)
+import Data.Binary            (Binary (..))
+import Data.Either            (isRight)
+import Data.Foldable          (toList)
+import Data.List.Compat       (foldl')
+import Data.Ord               (comparing)
+import Data.Proxy             (Proxy (..))
+import Data.Semigroup         (Semigroup (..))
+import Data.Semigroup.Reducer (Reducer (..))
+import GHC.TypeLits           (KnownNat, Nat, natVal)
 
 import qualified Data.Vector.Algorithms.Heap as VHeap
 import qualified Data.Vector.Unboxed         as VU
@@ -71,6 +74,12 @@ data TDigest (compression :: Nat)
 instance KnownNat comp => Semigroup (TDigest comp) where
     (<>) = combineDigest
 
+-- | Both 'cons' and 'snoc' are 'insert'
+instance KnownNat comp => Reducer Double (TDigest comp) where
+    cons = insert
+    snoc = flip insert
+    unit = singleton
+
 instance  KnownNat comp => Monoid (TDigest comp) where
     mempty  = emptyTDigest
     mappend = combineDigest
@@ -94,6 +103,11 @@ getCentroids = ($ []) . go
     go Nil                = id
     go (Node _ x w _ l r) = go l . ((x,w) : ) . go r
 
+-- | Total count of samples.
+--
+-- >>> totalWeight (tdigest [1..100] :: TDigest 3)
+-- 100.0
+--
 totalWeight :: TDigest comp -> Double
 totalWeight Nil                 = 0
 totalWeight (Node _ _ _ tw _ _) = tw
@@ -102,12 +116,22 @@ size :: TDigest comp -> Int
 size Nil                    = 0
 size (Node s _ _ _ _ _) = s
 
+-- | Center of left-most centroid. Note: may be different than min element inserted.
+--
+-- >>> minimumValue (tdigest [1..100] :: TDigest 3)
+-- 1.0
+--
 minimumValue :: TDigest comp -> Mean
 minimumValue = go posInf
   where
     go  acc Nil                    = acc
     go _acc (Node _ x _ _ l _) = go x l
 
+-- | Center of right-most centroid. Note: may be different than max element inserted.
+--
+-- >>> maximumValue (tdigest [1..100] :: TDigest 3)
+-- 99.0
+--
 maximumValue :: TDigest comp -> Mean
 maximumValue = go negInf
   where
@@ -302,7 +326,8 @@ threshold n q compression = 4 * n * q * (1 - q) / compression
 -- so they have opportunity to merge.
 --
 -- Compression will happen only if size is both:
--- bigger than @'relMaxSize' * comp@ and bigger than 'absMaxSize.
+-- bigger than @'relMaxSize' * comp@ and bigger than 'absMaxSize'.
+--
 compress :: forall comp. KnownNat comp => TDigest comp -> TDigest comp
 compress Nil = Nil
 compress td
@@ -426,3 +451,46 @@ negInf = negate posInf
 
 posInf :: Double
 posInf = 1/0
+
+-------------------------------------------------------------------------------
+-- Higher level helpers
+-------------------------------------------------------------------------------
+
+-- | Insert single value into 'TDigest'.
+insert
+    :: KnownNat comp
+    => Double         -- ^ element
+    -> TDigest comp
+    -> TDigest comp
+insert x = compress . insert' x
+
+-- | Insert single value, don't compress 'TDigest' even if needed.
+--
+-- For sensibly bounded input, it makes sense to let 'TDigest' grow (it might
+-- grow linearly in size), and after that compress it once.
+insert'
+    :: KnownNat comp
+    => Double         -- ^ element
+    -> TDigest comp
+    -> TDigest comp
+insert' x = insertCentroid (x, 1)
+
+-- | Make a 'TDigest' of a single data point.
+singleton :: KnownNat comp => Double -> TDigest comp
+singleton x = insert x emptyTDigest
+
+-- | Strict 'foldl'' over 'Foldable' structure.
+tdigest :: (Foldable f, KnownNat comp) => f Double -> TDigest comp
+tdigest = forceCompress . foldl' insertChunk emptyTDigest . chunks . toList
+  where
+    -- compress after each chunk, forceCompress at the very end.
+    insertChunk td xs =
+        compress (foldl' (flip insert') td xs)
+
+    chunks [] = []
+    chunks xs =
+        let (a, b) = splitAt 1000 xs -- 1000 is totally arbitrary.
+        in a : chunks b
+
+-- $setup
+-- >>> :set -XDataKinds

@@ -7,3 +7,4 @@ dist
 cabal.sandbox.config
 .stack-work
 tdigest-simple.prof
+output.svg

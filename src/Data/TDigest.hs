@@ -9,11 +9,16 @@
 --
 -- === Examples
 --
--- >>> median (tdigest [1..100] :: TDigest 10)
--- Just 50.5
+-- >>> quantile 0.99 (tdigest [1..1000] :: TDigest 25)
+-- Just 990.499...
 --
--- >>> median (tdigest [1..100] :: TDigest 3)
--- Just 49.098408814428936
+-- >>> quantile 0.99 (tdigest [1..1000] :: TDigest 3)
+-- Just 992.7...
+--
+-- t-Digest is more precise in tails, especially median is imprecise:
+--
+-- >>> median (tdigest [1..1000] :: TDigest 25)
+-- Just 502.5...
 --
 module Data.TDigest (
     -- * Construction
@@ -26,10 +31,33 @@ module Data.TDigest (
     insert',
 
     -- * Compression
+    --
+    -- |
+    --
+    -- >>> let digest = foldl' (flip insert') mempty [0..1000] :: TDigest 10
+    -- >>> (size digest, size $ compress digest)
+    -- (1001,54)
+    --
+    -- >>> (quantile 0.1 digest, quantile 0.1 $ compress digest)
+    -- (Just 99.6...,Just 90.1...)
+    --
+    -- /Note:/ when values are inserted in more random order,
+    -- t-Digest self-compresses on the fly:
+    --
+    -- >>> let digest = foldl' (flip insert') mempty (fairshuffle [0..1000]) :: TDigest 10
+    -- >>> (size digest, size $ compress digest, size $ forceCompress digest)
+    -- (77,77,44)
+    --
+    -- >>> quantile 0.1 digest
+    -- Just 96.9...
+    --
     compress,
     forceCompress,
 
     -- * Statistics
+    totalWeight,
+    minimumValue,
+    maximumValue,
     -- ** Histogram
     histogram,
     HistBin (..),
@@ -46,50 +74,16 @@ module Data.TDigest (
     ) where
 
 import Prelude ()
-import Prelude.Compat
-import Data.Foldable    (toList)
-import Data.List.Compat (foldl')
-import GHC.TypeLits     (KnownNat)
+import Prelude.Compat ()
 
 import Data.TDigest.Internal.Tree
 import Data.TDigest.Postprocess
 
--------------------------------------------------------------------------------
--- Functions
--------------------------------------------------------------------------------
-
--- | Make a 'TDigest' of a single data point.
-singleton :: KnownNat comp => Double -> TDigest comp
-singleton x = insert x emptyTDigest
-
--- | Strict 'foldl'' over 'Foldable' structure.
-tdigest :: (Foldable f, KnownNat comp) => f Double -> TDigest comp
-tdigest = forceCompress . foldl' insertChunk emptyTDigest . chunks . toList
-  where
-    -- compress after each chunk, forceCompress at the very end.
-    insertChunk td xs =
-        compress (foldl' (flip insert') td xs)
-
-    chunks [] = []
-    chunks xs =
-        let (a, b) = splitAt 1000 xs -- 1000 is totally arbitrary.
-        in a : chunks b
-
--- | Insert single value into 'TDigest'.
-insert
-    :: KnownNat comp
-    => Double         -- ^ element
-    -> TDigest comp
-    -> TDigest comp
-insert x = compress . insert' x
-
--- | Insert single value, don't compress 'TDigest' even if needed.
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> import Prelude.Compat
+-- >>> import Data.List.Compat (foldl')
 --
--- For sensibly bounded input, it makes sense to let 'TDigest' grow (it might
--- grow linearly in size), and after that compress it once.
-insert'
-    :: KnownNat comp
-    => Double         -- ^ element
-    -> TDigest comp
-    -> TDigest comp
-insert' x = insertCentroid (x, 1)
+-- >>> let merge [] ys = []; merge xs [] = xs; merge (x:xs) (y:ys) = x : y : merge xs ys
+-- >>> let fairshuffle' xs = uncurry merge (splitAt (length xs `div` 2) xs)
+-- >>> let fairshuffle xs = iterate fairshuffle' xs !! 5
