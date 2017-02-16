@@ -77,3 +77,7 @@ script:
  - cabal new-build -w ${HC} ${TEST} ${BENCH}
 
 # EOF
+
+branches:
+  only:
+    - master
