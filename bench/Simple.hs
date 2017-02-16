@@ -31,7 +31,7 @@ import qualified Options.Applicative          as O
 import qualified System.Random.MWC            as MWC
 
 import qualified Graphics.Rendering.Chart.Backend.Diagrams as Chart
-import           Graphics.Rendering.Chart.Easy             ((&), (.~))
+import           Graphics.Rendering.Chart.Easy             ((&), (.~), (^.))
 import qualified Graphics.Rendering.Chart.Easy             as Chart
 
 import Data.TDigest
@@ -65,10 +65,10 @@ timed mx = do
     e <- getCurrentTime
     print (diffUTCTime e s)
 
-action :: Method -> Distrib -> Int -> Int -> Maybe FilePath -> IO ()
-action m d s c fp = do
+action :: Method -> Distrib -> Int -> Int -> Word32 -> Maybe FilePath -> IO ()
+action m d s c iseed fp = do
     print (m, d, s, c)
-    let seed = initSeed (V.singleton 42)
+    let seed = initSeed (V.singleton iseed)
     let dens = case d of
             DistribIncr     -> density $ uniformDistr 0 (fromIntegral s)
             DistribUniform  -> density $ uniformDistr 0 1     -- median around 0.5
@@ -105,6 +105,8 @@ actionParser = action
         O.short 's' <> O.long "size" <> O.metavar ":size" <> O.value 1000000)
     <*> O.option O.auto (
         O.short 'c' <> O.long "compression" <> O.metavar ":comp" <> O.value 20)
+    <*> O.option O.auto (
+        O.short 'i' <> O.long "seed" <> O.metavar ":seed" <> O.value 42)
     <*> O.optional (O.strOption (
         O.short 'o' <> O.long "output" <> O.metavar ":output.svg"))
   where
@@ -232,12 +234,13 @@ printStats mfp dens digest = do
         Chart.toFile Chart.def fp $ do
             Chart.layout_title Chart..= "Histogram"
             color <- Chart.takeColor
-            let fillStyle = Chart.def & Chart.fill_color .~ color
-            Chart.plot $ pure $ tdigestToPlot fillStyle digest
+            let lineStyle = Chart.def
+                  & Chart.line_color .~ color
+            Chart.plot $ pure $ tdigestToPlot lineStyle digest
             Chart.plot $ Chart.line "theoretical" [map (\x -> (x, dens x)) points]
 
-tdigestToPlot :: Chart.FillStyle -> TDigest comp -> Chart.Plot Double Double
-tdigestToPlot fillStyle digest = Chart.Plot
+tdigestToPlot :: Chart.LineStyle -> TDigest comp -> Chart.Plot Double Double
+tdigestToPlot lineStyle digest = Chart.Plot
     { Chart._plot_render     = renderHistogram
     , Chart._plot_legend     = []
     , Chart._plot_all_points = unzip allPoints
@@ -252,13 +255,17 @@ tdigestToPlot fillStyle digest = Chart.Plot
     tw = totalWeight digest
 
     renderHistogram pmap = do
-        Chart.withFillStyle fillStyle $ for_ hist $ \(HistBin mi ma w _) -> do
-            let d = ma - mi
-                y = w / d / tw
-                path = Chart.rectPath $ Chart.Rect
-                    (Chart.mapXY pmap (mi,0))
-                    (Chart.mapXY pmap (ma,y))
-            Chart.alignFillPath path >>= Chart.fillPath
+        let fillColor = Chart.blend 0.5 (Chart.opaque Chart.white) (lineStyle ^. Chart.line_color)
+        let fillStyle = Chart.def & Chart.fill_color .~ fillColor
+        Chart.withLineStyle lineStyle $ Chart.withFillStyle fillStyle $
+            for_ hist $ \(HistBin mi ma w _) -> do
+                let d = ma - mi
+                    y = w / d / tw
+                    path = Chart.rectPath $ Chart.Rect
+                        (Chart.mapXY pmap (mi,0))
+                        (Chart.mapXY pmap (ma,y))
+                Chart.alignFillPath path >>= Chart.fillPath
+                Chart.alignStrokePath path >>= Chart.strokePath
 
 -------------------------------------------------------------------------------
 -- Machine additions
