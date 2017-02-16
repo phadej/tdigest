@@ -12,6 +12,7 @@ import Data.Foldable               (for_)
 import Data.List                   (sort)
 import Data.Machine
 import Data.Machine.Runner         (runT1)
+import Data.Maybe                  (mapMaybe)
 import Data.Monoid                 ((<>))
 import Data.Proxy                  (Proxy (..))
 import Data.Time                   (diffUTCTime, getCurrentTime)
@@ -21,6 +22,7 @@ import Statistics.Distribution     (ContGen (..))
 
 import Statistics.Distribution.Exponential (exponential)
 import Statistics.Distribution.Gamma       (gammaDistr)
+import Statistics.Distribution.Normal      (standard)
 import Statistics.Distribution.Uniform     (uniformDistr)
 
 import qualified Data.Vector.Algorithms.Intro as Intro
@@ -28,6 +30,9 @@ import qualified Data.Vector.Unboxed          as V
 import qualified Data.Vector.Unboxed.Mutable  as VU
 import qualified Options.Applicative          as O
 import qualified System.Random.MWC            as MWC
+
+import qualified Graphics.Rendering.Chart.Backend.Diagrams as Chart
+import qualified Graphics.Rendering.Chart.Easy             as Chart
 
 import Data.TDigest
 
@@ -49,6 +54,7 @@ data Distrib
     | DistribUniform
     | DistribExponent
     | DistribGamma
+    | DistribStandard
   deriving (Show)
 
 timed :: Show a => IO a -> IO ()
@@ -59,8 +65,8 @@ timed mx = do
     e <- getCurrentTime
     print (diffUTCTime e s)
 
-action :: Method -> Distrib -> Int -> Int -> IO ()
-action m d s c = do
+action :: Method -> Distrib -> Int -> Int -> Maybe FilePath -> IO ()
+action m d s c fp = do
     print (m, d, s, c)
     let seed = initSeed (V.singleton 42)
     let input = take s $ case d of
@@ -68,13 +74,14 @@ action m d s c = do
             DistribUniform  -> randomStream (uniformDistr 0 1) seed     -- median around 0.5
             DistribExponent -> randomStream (exponential $ log 2) seed  -- median around 1.0
             DistribGamma    -> randomStream (gammaDistr 0.1 0.1) seed    -- median around .0000593391
+            DistribStandard -> randomStream standard seed
     let method = case m of
           MethodAverage         -> pure . average
           MethodNaive           -> pure . naiveMedian
           MethodVector          -> pure . vectorMedian
-          MethodTDigest         -> reifyNat c tdigestMachine
-          MethodTDigestBuffered -> reifyNat c tdigestBufferedMachine
-          MethodTDigestSparking -> reifyNat c tdigestSparkingMachine
+          MethodTDigest         -> reifyNat c $ tdigestMachine fp
+          MethodTDigestBuffered -> reifyNat c $ tdigestBufferedMachine fp
+          MethodTDigestSparking -> reifyNat c $ tdigestSparkingMachine fp
     timed $ method input
 
 reifyNat :: forall x. Int -> (forall n. KnownNat n => Proxy n -> x) -> x
@@ -92,11 +99,14 @@ actionParser = action
         O.short 's' <> O.long "size" <> O.metavar ":size" <> O.value 1000000)
     <*> O.option O.auto (
         O.short 'c' <> O.long "compression" <> O.metavar ":comp" <> O.value 20)
+    <*> O.optional (O.strOption (
+        O.short 'o' <> O.long "output" <> O.metavar ":output.svg"))
   where
-    readMethod "average"    = Just MethodAverage
+    readMethod "average"  = Just MethodAverage
     readMethod "naive"    = Just MethodNaive
     readMethod "vector"   = Just MethodVector
     readMethod "digest"   = Just MethodTDigest
+    readMethod "tdigest"  = Just MethodTDigest
     readMethod "buffered" = Just MethodTDigestBuffered
     readMethod "sparking" = Just MethodTDigestSparking
     readMethod _          = Nothing
@@ -104,6 +114,7 @@ actionParser = action
     readDistrib "incr"     = Just DistribIncr
     readDistrib "uniform"  = Just DistribUniform
     readDistrib "exponent" = Just DistribExponent
+    readDistrib "standard" = Just DistribStandard
     readDistrib "gamma"    = Just DistribGamma
     readDistrib _          = Nothing
 
@@ -141,14 +152,16 @@ vectorMedian l
         Intro.sort mv
         Just <$> VU.unsafeRead mv (VU.length mv `div` 2)
 
-tdigestMachine :: forall comp. KnownNat comp => Proxy comp -> [Double] -> IO (Maybe Double)
-tdigestMachine _ input = do
+tdigestMachine
+    :: forall comp. KnownNat comp
+    => Maybe FilePath -> Proxy comp -> [Double] -> IO (Maybe Double)
+tdigestMachine fp _ input = do
     mdigest <- fmap validate <$> runT1 machine
     case mdigest of
         Nothing             -> return Nothing
         Just (Left err)     -> fail $ "Validation error: " ++ err
         Just (Right digest) -> do
-            printStats digest
+            printStats fp digest
             return $ median digest
   where
     machine :: MachineT IO k (TDigest comp)
@@ -156,14 +169,16 @@ tdigestMachine _ input = do
         =  fold (flip insert) mempty
         <~ source input
 
-tdigestBufferedMachine :: forall comp. KnownNat comp => Proxy comp -> [Double] -> IO (Maybe Double)
-tdigestBufferedMachine _ input = do
+tdigestBufferedMachine
+    :: forall comp. KnownNat comp
+    => Maybe FilePath -> Proxy comp -> [Double] -> IO (Maybe Double)
+tdigestBufferedMachine fp _ input = do
     mdigest <- fmap validate <$> runT1 machine
     case mdigest of
         Nothing             -> return Nothing
         Just (Left err)     -> fail $ "Validation error: " ++ err
         Just (Right digest) -> do
-            printStats digest
+            printStats fp digest
             return $ median digest
   where
     machine :: MachineT IO k (TDigest comp)
@@ -174,14 +189,16 @@ tdigestBufferedMachine _ input = do
         <~ source input
 
 -- Sparking machine doesn't count
-tdigestSparkingMachine :: forall comp. KnownNat comp => Proxy comp -> [Double] -> IO (Maybe Double)
-tdigestSparkingMachine _ input = do
+tdigestSparkingMachine
+    :: forall comp. KnownNat comp
+    => Maybe FilePath -> Proxy comp -> [Double] -> IO (Maybe Double)
+tdigestSparkingMachine fp _ input = do
     mdigest <- fmap validate <$> runT1 machine
     case mdigest of
         Nothing             -> return Nothing
         Just (Left err)     -> fail $ "Validation error: " ++ err
         Just (Right digest) -> do
-            printStats digest
+            printStats fp digest
             return $ median digest
   where
     machine :: MachineT IO k (TDigest comp)
@@ -192,8 +209,8 @@ tdigestSparkingMachine _ input = do
         <~ buffered 10000
         <~ source input
 
-printStats :: TDigest comp -> IO ()
-printStats digest = do
+printStats :: Maybe FilePath -> TDigest comp -> IO ()
+printStats mfp digest = do
     -- Extra: print quantiles
     putStrLn "quantiles"
     for_ ([0.1,0.2..0.9] ++ [0.95,0.99,0.999,0.9999,0.99999]) $ \q ->
@@ -201,6 +218,18 @@ printStats digest = do
     putStrLn "cdf"
     for_ ([0, 0.25, 0.5, 1, 2]) $ \x ->
         putStrLn $ show x ++ ": " ++ show (cdf x digest)
+    for_ mfp $ \fp -> do
+        let hist = histogram digest
+        let bars = flip mapMaybe hist $ \(HistBin mi ma w _) ->
+                let x = (ma + mi) / 2
+                    d = ma - mi
+                    y = w / d
+                in if d < 1e-6 then Nothing else Just (x, [y])
+        putStrLn $ "Writing to " ++ fp
+        Chart.toFile Chart.def fp $ do
+            Chart.layout_title Chart..= "Histogram"
+            Chart.plot $ Chart.plotBars <$>
+                Chart.bars ["histogram"] bars
 
 -------------------------------------------------------------------------------
 -- Machine additions
