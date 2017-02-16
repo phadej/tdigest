@@ -36,14 +36,20 @@ library
     , base-compat         >=0.9.1    && <0.10
     , deepseq             >=1.3.0.2  && <1.5
     , binary              >=0.7.1.0  && <0.9
+    , reducers            >=3.12.1   && <3.13
     , semigroups          >=0.18.2   && <0.19
     , vector              >=0.11     && <0.13
     , vector-algorithms   >=0.7.0.1  && <0.8
   exposed-modules:
       Data.TDigest
-      Data.TDigest.Internal.Tree
       Data.TDigest.Postprocess
+      Data.TDigest.Internal.Tree
   default-language: Haskell2010
+  other-extensions:
+      DataKinds
+      KindSignatures
+      MultiParamTypeClasses
+      ScopedTypeVariables
 
 test-suite tdigest-tests
   type: exitcode-stdio-1.0

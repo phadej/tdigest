@@ -1,6 +1,7 @@
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE KindSignatures      #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE KindSignatures        #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 -- | Internals of 'TDigest'.
 --
 -- Tree implementation is based on /Adams’ Trees Revisited/ by Milan Straka
@@ -9,15 +10,16 @@ module Data.TDigest.Internal.Tree where
 
 import Prelude ()
 import Prelude.Compat
-import Control.DeepSeq  (NFData (..))
-import Control.Monad.ST (ST, runST)
-import Data.Binary      (Binary (..))
-import Data.Either      (isRight)
-import Data.List.Compat (foldl')
-import Data.Ord         (comparing)
-import Data.Proxy       (Proxy (..))
-import Data.Semigroup   (Semigroup (..))
-import GHC.TypeLits     (KnownNat, Nat, natVal)
+import Control.DeepSeq        (NFData (..))
+import Control.Monad.ST       (ST, runST)
+import Data.Binary            (Binary (..))
+import Data.Either            (isRight)
+import Data.List.Compat       (foldl')
+import Data.Ord               (comparing)
+import Data.Proxy             (Proxy (..))
+import Data.Semigroup         (Semigroup (..))
+import Data.Semigroup.Reducer (Reducer (..))
+import GHC.TypeLits           (KnownNat, Nat, natVal)
 
 import qualified Data.Vector.Algorithms.Heap as VHeap
 import qualified Data.Vector.Unboxed         as VU
@@ -70,6 +72,12 @@ data TDigest (compression :: Nat)
 
 instance KnownNat comp => Semigroup (TDigest comp) where
     (<>) = combineDigest
+
+-- | Both 'cons' and 'snoc' are 'insert'
+instance KnownNat comp => Reducer Double (TDigest comp) where
+    cons = insert
+    snoc = flip insert
+    unit = singleton
 
 instance  KnownNat comp => Monoid (TDigest comp) where
     mempty  = emptyTDigest
@@ -426,3 +434,30 @@ negInf = negate posInf
 
 posInf :: Double
 posInf = 1/0
+
+-------------------------------------------------------------------------------
+-- Higher level helpers
+-------------------------------------------------------------------------------
+
+-- | Insert single value into 'TDigest'.
+insert
+    :: KnownNat comp
+    => Double         -- ^ element
+    -> TDigest comp
+    -> TDigest comp
+insert x = compress . insert' x
+
+-- | Insert single value, don't compress 'TDigest' even if needed.
+--
+-- For sensibly bounded input, it makes sense to let 'TDigest' grow (it might
+-- grow linearly in size), and after that compress it once.
+insert'
+    :: KnownNat comp
+    => Double         -- ^ element
+    -> TDigest comp
+    -> TDigest comp
+insert' x = insertCentroid (x, 1)
+
+-- | Make a 'TDigest' of a single data point.
+singleton :: KnownNat comp => Double -> TDigest comp
+singleton x = insert x emptyTDigest
