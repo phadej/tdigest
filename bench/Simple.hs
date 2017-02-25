@@ -16,7 +16,7 @@ import Data.Monoid                 ((<>))
 import Data.Proxy                  (Proxy (..))
 import Data.Time                   (diffUTCTime, getCurrentTime)
 import Data.Word                   (Word32)
-import GHC.TypeLits                (KnownNat, SomeNat (..), someNatVal)
+import GHC.TypeLits                (KnownNat, SomeNat (..), natVal, someNatVal)
 import Statistics.Distribution     (ContGen (..), density)
 
 import Statistics.Distribution.Exponential (exponential)
@@ -217,7 +217,7 @@ tdigestSparkingMachine fp dens _ input = do
         <~ buffered 10000
         <~ source input
 
-printStats :: Maybe FilePath -> (Double -> Double) -> TDigest comp -> IO ()
+printStats :: KnownNat comp => Maybe FilePath -> (Double -> Double) -> TDigest comp -> IO ()
 printStats mfp dens digest = do
     -- Extra: print quantiles
     putStrLn "quantiles"
@@ -228,16 +228,41 @@ printStats mfp dens digest = do
         putStrLn $ show x ++ ": " ++ show (cdf x digest)
     let mi = minimumValue digest
     let ma = maximumValue digest
+    case validateHistogram (histogram digest) of
+        Right _hist -> {- do
+            putStrLn $ "Histogram ok"
+            traverse print hist -}
+            pure ()
+        Left err -> putStrLn $ "Errorneous histogram: " ++ err
     let points = flip map [0,0.01..1] $ \x -> mi + (ma - mi) * x
     for_ mfp $ \fp -> do
         putStrLn $ "Writing to " ++ fp
         Chart.toFile Chart.def fp $ do
             Chart.layout_title Chart..= "Histogram"
             color <- Chart.takeColor
-            let lineStyle = Chart.def
-                  & Chart.line_color .~ color
+            let lineStyle = Chart.def & Chart.line_color .~ color
             Chart.plot $ pure $ tdigestToPlot lineStyle digest
             Chart.plot $ Chart.line "theoretical" [map (\x -> (x, dens x)) points]
+            -- Chart.plot $ Chart.line "bin sizes" [tdigestBinSize digest]
+
+tdigestBinSize :: forall comp. KnownNat comp => TDigest comp -> [(Double, Double)]
+tdigestBinSize digest = flip map hist $ \(HistBin mi ma w cum) ->
+    let x = (ma + mi) / 2
+        d = ma - mi
+
+        q = (w / 2 + cum) / tw
+        thr = threshold tw q
+
+        y = thr / d / tw
+    in (x, y)
+  where
+    hist = histogram digest
+    tw = totalWeight digest
+
+    compression :: Double
+    compression = fromInteger $ natVal (Proxy :: Proxy comp)
+
+    threshold n q = 4 * n * q * (1 - q) / compression
 
 tdigestToPlot :: Chart.LineStyle -> TDigest comp -> Chart.Plot Double Double
 tdigestToPlot lineStyle digest = Chart.Plot

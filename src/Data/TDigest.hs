@@ -71,6 +71,7 @@ module Data.TDigest (
     -- * Debug
     valid,
     validate,
+    validateHistogram,
     ) where
 
 import Prelude ()

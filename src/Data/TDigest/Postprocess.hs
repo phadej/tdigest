@@ -12,6 +12,8 @@ module Data.TDigest.Postprocess (
     -- * CDF
     cdf,
     icdf,
+    -- * Debug
+    validateHistogram,
     ) where
 
 import Prelude ()
@@ -51,6 +53,17 @@ histogram = iter Nothing 0 . getCentroids
         = [HistBin (mid x0 x1) x1 w1 t]
 
     mid a b = (a + b) / 2
+
+validateHistogram :: [HistBin] -> Either String [HistBin]
+validateHistogram bs = traverse validPair (pairs bs) >> pure bs
+  where
+    validPair (lb@(HistBin _ lmax lwt lcw), rb@(HistBin rmin _ _ rcw)) = do
+        check (lmax == rmin)     "gap between bins"
+        check (lcw + lwt == rcw) "mismatch in weight cumulation"
+      where
+        check False err = Left $ err ++ " " ++ show (lb, rb)
+        check True  _   = Right ()
+    pairs xs = zip xs $ tail xs
 
 -------------------------------------------------------------------------------
 -- Quantile
