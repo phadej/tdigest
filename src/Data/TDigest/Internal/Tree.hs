@@ -405,6 +405,7 @@ balAlpha = 2
 -- Debug
 -------------------------------------------------------------------------------
 
+-- | Output the 'TDigest' tree.
 debugPrint :: TDigest comp -> IO ()
 debugPrint td = go 0 td
   where

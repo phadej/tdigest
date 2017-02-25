@@ -54,17 +54,6 @@ histogram = iter Nothing 0 . getCentroids
 
     mid a b = (a + b) / 2
 
-validateHistogram :: [HistBin] -> Either String [HistBin]
-validateHistogram bs = traverse validPair (pairs bs) >> pure bs
-  where
-    validPair (lb@(HistBin _ lmax lwt lcw), rb@(HistBin rmin _ _ rcw)) = do
-        check (lmax == rmin)     "gap between bins"
-        check (lcw + lwt == rcw) "mismatch in weight cumulation"
-      where
-        check False err = Left $ err ++ " " ++ show (lb, rb)
-        check True  _   = Right ()
-    pairs xs = zip xs $ tail xs
-
 -------------------------------------------------------------------------------
 -- Quantile
 -------------------------------------------------------------------------------
@@ -109,3 +98,21 @@ cdf x td =
         | x < a     = 0
         | x < b     = (t + w * (x - a) / (b - a)) / n
         | otherwise = iter rest
+
+-------------------------------------------------------------------------------
+-- Debug
+-------------------------------------------------------------------------------
+
+-- | Validate that list of 'HistBin' is a valid "histogram".
+validateHistogram :: [HistBin] -> Either String [HistBin]
+validateHistogram bs = traverse validPair (pairs bs) >> pure bs
+  where
+    validPair (lb@(HistBin _ lmax lwt lcw), rb@(HistBin rmin _ _ rcw)) = do
+        check (lmax == rmin)     "gap between bins"
+        check (lcw + lwt == rcw) "mismatch in weight cumulation"
+      where
+        check False err = Left $ err ++ " " ++ show (lb, rb)
+        check True  _   = Right ()
+    pairs xs = zip xs $ tail xs
+
+
