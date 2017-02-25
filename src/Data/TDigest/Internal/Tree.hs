@@ -222,7 +222,8 @@ insertCentroid (mean, weight) td = go 0 mean weight False td
                 rmin = minimumValue r
       where
         -- quantile approximation of current node
-        q   = (w / 2 + cum) / n
+        cum' = cum + totalWeight l
+        q   = (w / 2 + cum') / n
 
         -- threshold, max size of current node/centroid
         thr = {- traceShowId $ traceShow (n, q) $ -} threshold n q compression
