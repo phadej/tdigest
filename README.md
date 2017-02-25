@@ -26,6 +26,7 @@ Using 50M exponentially distributed numbers:
 
 ```
 tdigest-simple -m tdigest -d standard -s 100000 -c 10 -o output.svg -i 34
+cp output.svg example.svg
 inkscape --export-png=example.png --export-dpi=80 --export-background-opacity=0 --without-gui example.svg
 ```
 
