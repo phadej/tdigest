@@ -26,9 +26,13 @@ import qualified Data.Vector.Algorithms.Heap as VHeap
 import qualified Data.Vector.Unboxed         as VU
 import qualified Data.Vector.Unboxed.Mutable as MVU
 
+{-# INLINE assert #-}
 assert :: Bool -> String -> a -> a
+assert _ _ = \x -> x
+{-
 assert False msg _ = error msg
 assert True  _   x = x
+-}
 
 -------------------------------------------------------------------------------
 -- TDigest
