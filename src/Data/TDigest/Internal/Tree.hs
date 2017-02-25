@@ -105,7 +105,7 @@ getCentroids = ($ []) . go
 
 -- | Total count of samples.
 --
--- >>> totalWeight (tdigest [1..100] :: TDigest 3)
+-- >>> totalWeight (tdigest [1..100] :: TDigest 5)
 -- 100.0
 --
 totalWeight :: TDigest comp -> Double

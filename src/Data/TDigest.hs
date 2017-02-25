@@ -13,12 +13,12 @@
 -- Just 990.499...
 --
 -- >>> quantile 0.99 (tdigest [1..1000] :: TDigest 3)
--- Just 992.7...
+-- Just 992.3...
 --
 -- t-Digest is more precise in tails, especially median is imprecise:
 --
 -- >>> median (tdigest [1..1000] :: TDigest 25)
--- Just 502.5...
+-- Just 497.6...
 --
 module Data.TDigest (
     -- * Construction
@@ -36,20 +36,20 @@ module Data.TDigest (
     --
     -- >>> let digest = foldl' (flip insert') mempty [0..1000] :: TDigest 10
     -- >>> (size digest, size $ compress digest)
-    -- (1001,54)
+    -- (1001,52)
     --
     -- >>> (quantile 0.1 digest, quantile 0.1 $ compress digest)
-    -- (Just 99.6...,Just 90.1...)
+    -- (Just 99.6...,Just 89.7...)
     --
     -- /Note:/ when values are inserted in more random order,
     -- t-Digest self-compresses on the fly:
     --
     -- >>> let digest = foldl' (flip insert') mempty (fairshuffle [0..1000]) :: TDigest 10
     -- >>> (size digest, size $ compress digest, size $ forceCompress digest)
-    -- (77,77,44)
+    -- (78,78,48)
     --
     -- >>> quantile 0.1 digest
-    -- Just 96.9...
+    -- Just 98.9...
     --
     compress,
     forceCompress,
