@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module Main (main) where
+module Main (main, tdigestBinSize) where
 
 import Prelude ()
 import Prelude.Compat
@@ -229,11 +229,17 @@ printStats mfp dens digest = do
     let mi = minimumValue digest
     let ma = maximumValue digest
     case validateHistogram (histogram digest) of
-        Right _hist -> {- do
+        Right _hist -> do
+            {-
             putStrLn $ "Histogram ok"
-            traverse print hist -}
+            _ <- traverse print hist
+            -}
             pure ()
         Left err -> putStrLn $ "Errorneous histogram: " ++ err
+    {-
+    putStrLn "Debug output"
+    debugPrint digest
+    -}
     let points = flip map [0,0.01..1] $ \x -> mi + (ma - mi) * x
     for_ mfp $ \fp -> do
         putStrLn $ "Writing to " ++ fp

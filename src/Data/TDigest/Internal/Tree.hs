@@ -404,6 +404,15 @@ balAlpha = 2
 -- Debug
 -------------------------------------------------------------------------------
 
+debugPrint :: TDigest comp -> IO ()
+debugPrint td = go 0 td
+  where
+    go i Nil = putStrLn $ replicate (i * 3) ' ' ++ "Nil"
+    go i (Node s m w tw l r) = do
+        go (i + 1) l
+        putStrLn $ replicate (i * 3) ' ' ++ "Node " ++ show (s,m,w,tw)
+        go (i + 1) r
+
 -- | @'isRight' . 'validate'@
 valid :: TDigest comp -> Bool
 valid = isRight . validate
