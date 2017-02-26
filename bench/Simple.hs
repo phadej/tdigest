@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE GADTs               #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Main (main, tdigestBinSize) where
@@ -12,12 +13,14 @@ import Data.Foldable               (for_)
 import Data.List                   (sort)
 import Data.Machine
 import Data.Machine.Runner         (runT1)
+import Data.Maybe                  (fromMaybe)
 import Data.Monoid                 ((<>))
 import Data.Proxy                  (Proxy (..))
 import Data.Time                   (diffUTCTime, getCurrentTime)
 import Data.Word                   (Word32)
 import GHC.TypeLits                (KnownNat, SomeNat (..), natVal, someNatVal)
-import Statistics.Distribution     (ContGen (..), density)
+import Numeric                     (showFFloat)
+import Statistics.Distribution     (cumulative, ContDistr (..), ContGen (..))
 
 import Statistics.Distribution.Exponential (exponential)
 import Statistics.Distribution.Gamma       (gammaDistr)
@@ -57,11 +60,14 @@ data Distrib
     | DistribStandard
   deriving (Show)
 
+data SomeContDistr where
+    SomeContDistr :: ContDistr d => d -> SomeContDistr
+
 timed :: Show a => IO a -> IO ()
 timed mx = do
     s <- getCurrentTime
     x <- mx
-    print x
+    putStrLn $ "Result: " ++ show x
     e <- getCurrentTime
     print (diffUTCTime e s)
 
@@ -69,12 +75,12 @@ action :: Method -> Distrib -> Int -> Int -> Word32 -> Maybe FilePath -> IO ()
 action m d s c iseed fp = do
     print (m, d, s, c)
     let seed = initSeed (V.singleton iseed)
-    let dens = case d of
-            DistribIncr     -> density $ uniformDistr 0 (fromIntegral s)
-            DistribUniform  -> density $ uniformDistr 0 1     -- median around 0.5
-            DistribExponent -> density $ exponential $ log 2  -- median around 1.0
-            DistribGamma    -> density $ gammaDistr 0.1 0.1   -- median around .0000593391
-            DistribStandard -> density standard
+    let distr = case d of
+            DistribIncr     -> SomeContDistr $ uniformDistr 0 (fromIntegral s)
+            DistribUniform  -> SomeContDistr $ uniformDistr 0 1     -- median around 0.5
+            DistribExponent -> SomeContDistr $ exponential $ log 2  -- median around 1.0
+            DistribGamma    -> SomeContDistr $ gammaDistr 0.1 0.1   -- median around .0000593391
+            DistribStandard -> SomeContDistr standard
     let input = take s $ case d of
             DistribIncr     -> [1 .. fromIntegral s] -- not sure, but end point prevents floating
             DistribUniform  -> randomStream (uniformDistr 0 1) seed     -- median around 0.5
@@ -85,9 +91,9 @@ action m d s c iseed fp = do
           MethodAverage         -> pure . average
           MethodNaive           -> pure . naiveMedian
           MethodVector          -> pure . vectorMedian
-          MethodTDigest         -> reifyNat c $ tdigestMachine fp dens
-          MethodTDigestBuffered -> reifyNat c $ tdigestBufferedMachine fp dens
-          MethodTDigestSparking -> reifyNat c $ tdigestSparkingMachine fp dens
+          MethodTDigest         -> reifyNat c $ tdigestMachine fp distr
+          MethodTDigestBuffered -> reifyNat c $ tdigestBufferedMachine fp distr
+          MethodTDigestSparking -> reifyNat c $ tdigestSparkingMachine fp distr
     timed $ method input
 
 reifyNat :: forall x. Int -> (forall n. KnownNat n => Proxy n -> x) -> x
@@ -162,14 +168,14 @@ vectorMedian l
 
 tdigestMachine
     :: forall comp. KnownNat comp
-    => Maybe FilePath -> (Double -> Double) -> Proxy comp -> [Double] -> IO (Maybe Double)
-tdigestMachine fp dens _ input = do
+    => Maybe FilePath -> SomeContDistr -> Proxy comp -> [Double] -> IO (Maybe Double)
+tdigestMachine fp d _ input = do
     mdigest <- fmap validate <$> runT1 machine
     case mdigest of
         Nothing             -> return Nothing
         Just (Left err)     -> fail $ "Validation error: " ++ err
         Just (Right digest) -> do
-            printStats fp dens digest
+            printStats fp d digest
             return $ median digest
   where
     machine :: MachineT IO k (TDigest comp)
@@ -179,14 +185,14 @@ tdigestMachine fp dens _ input = do
 
 tdigestBufferedMachine
     :: forall comp. KnownNat comp
-    => Maybe FilePath -> (Double -> Double) -> Proxy comp -> [Double] -> IO (Maybe Double)
-tdigestBufferedMachine fp dens _ input = do
+    => Maybe FilePath -> SomeContDistr -> Proxy comp -> [Double] -> IO (Maybe Double)
+tdigestBufferedMachine fp d _ input = do
     mdigest <- fmap validate <$> runT1 machine
     case mdigest of
         Nothing             -> return Nothing
         Just (Left err)     -> fail $ "Validation error: " ++ err
         Just (Right digest) -> do
-            printStats fp dens digest
+            printStats fp d digest
             return $ median digest
   where
     machine :: MachineT IO k (TDigest comp)
@@ -199,14 +205,14 @@ tdigestBufferedMachine fp dens _ input = do
 -- Sparking machine doesn't count
 tdigestSparkingMachine
     :: forall comp. KnownNat comp
-    => Maybe FilePath -> (Double -> Double) -> Proxy comp -> [Double] -> IO (Maybe Double)
-tdigestSparkingMachine fp dens _ input = do
+    => Maybe FilePath -> SomeContDistr -> Proxy comp -> [Double] -> IO (Maybe Double)
+tdigestSparkingMachine fp d _ input = do
     mdigest <- fmap validate <$> runT1 machine
     case mdigest of
         Nothing             -> return Nothing
         Just (Left err)     -> fail $ "Validation error: " ++ err
         Just (Right digest) -> do
-            printStats fp dens digest
+            printStats fp d digest
             return $ median digest
   where
     machine :: MachineT IO k (TDigest comp)
@@ -217,15 +223,37 @@ tdigestSparkingMachine fp dens _ input = do
         <~ buffered 10000
         <~ source input
 
-printStats :: KnownNat comp => Maybe FilePath -> (Double -> Double) -> TDigest comp -> IO ()
-printStats mfp dens digest = do
+printStats :: KnownNat comp => Maybe FilePath -> SomeContDistr -> TDigest comp -> IO ()
+printStats mfp (SomeContDistr d) digest = do
+    let showFFloat' = showFFloat (Just 6)
+
     -- Extra: print quantiles
     putStrLn "quantiles"
-    for_ ([0.1,0.2..0.9] ++ [0.95,0.99,0.999,0.9999,0.99999]) $ \q ->
-        putStrLn $ show q ++ ":" ++ show (quantile q digest)
+    for_ ([0.1,0.2..0.9] ++ [0.95,0.99,0.999,0.9999,0.99999]) $ \q -> do
+        let tdigestQ    = fromMaybe (-1) $ Data.TDigest.quantile q digest
+        let analyticQ   = Statistics.Distribution.quantile d q
+        putStrLn
+            $ showFFloat' q
+            . showString ": "
+            . showFFloat' tdigestQ
+            . showString " "
+            . showFFloat' analyticQ
+            . showString " "
+            . showFFloat' (abs $ analyticQ - tdigestQ)
+            $ ""
     putStrLn "cdf"
-    for_ ([0, 0.25, 0.5, 1, 2]) $ \x ->
-        putStrLn $ show x ++ ": " ++ show (cdf x digest)
+    for_ ([0, 0.25, 0.5, 1, 2]) $ \x -> do
+        let tdigestC = cdf x digest
+        let analyticC = cumulative d x
+        putStrLn
+            $ showFFloat' x
+            . showString ": "
+            . showFFloat' tdigestC
+            . showString " "
+            . showFFloat' analyticC
+            . showString " "
+            . showFFloat' (abs $ analyticC - tdigestC)
+            $ ""
     let mi = minimumValue digest
     let ma = maximumValue digest
     case validateHistogram (histogram digest) of
@@ -248,7 +276,7 @@ printStats mfp dens digest = do
             color <- Chart.takeColor
             let lineStyle = Chart.def & Chart.line_color .~ color
             Chart.plot $ pure $ tdigestToPlot lineStyle digest
-            Chart.plot $ Chart.line "theoretical" [map (\x -> (x, dens x)) points]
+            Chart.plot $ Chart.line "theoretical" [map (\x -> (x, density d x)) points]
             -- Chart.plot $ Chart.line "bin sizes" [tdigestBinSize digest]
 
 tdigestBinSize :: forall comp. KnownNat comp => TDigest comp -> [(Double, Double)]
