@@ -75,8 +75,7 @@ median = quantile 0.5
 
 -- | Calculate quantile of a specific value.
 quantile :: Double -> TDigest comp -> Maybe Double
-quantile q td =
-    fmap (quantile' q (totalWeight td)) $ histogram td
+quantile q td = quantile' q (totalWeight td) <$> histogram td
 
 -- | Quantile from histogram.
 quantile' :: Double -> Weight -> NonEmpty HistBin -> Double

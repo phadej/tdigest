@@ -11,7 +11,7 @@ import Prelude.Compat
 import Control.Monad               (join, replicateM)
 import Control.Monad.ST            (runST)
 import Control.Parallel.Strategies (parList, rseq, using)
-import Data.Foldable               (for_)
+import Data.Foldable               (for_, toList)
 import Data.List                   (foldl', sort)
 import Data.Machine
 import Data.Machine.Runner         (runT1)
@@ -307,14 +307,15 @@ printStats mfp (SomeContDistr d) digest = do
             $ ""
     let mi = minimumValue digest
     let ma = maximumValue digest
-    case validateHistogram (histogram digest) of
-        Right _hist -> do
+    case validateHistogram <$> histogram digest of
+        Nothing -> pure ()
+        Just (Right _hist) -> do
             {-
             putStrLn $ "Histogram ok"
             _ <- traverse print hist
             -}
             pure ()
-        Left err -> putStrLn $ "Errorneous histogram: " ++ err
+        Just (Left err) -> putStrLn $ "Errorneous histogram: " ++ err
     {-
     putStrLn "Debug output"
     debugPrint digest
@@ -341,7 +342,7 @@ tdigestBinSize digest = flip map hist $ \(HistBin mi ma w cum) ->
         y = thr / d / tw
     in (x, y)
   where
-    hist = histogram digest
+    hist = foldMap toList (histogram digest)
     tw = totalWeight digest
 
     compression :: Double
@@ -356,7 +357,7 @@ tdigestToPlot lineStyle digest = Chart.Plot
     , Chart._plot_all_points = unzip allPoints
     }
   where
-    hist = histogram digest
+    hist = foldMap toList (histogram digest)
     allPoints = flip map hist $ \(HistBin mi ma w _) ->
         let x = (ma + mi) / 2
             d = ma - mi

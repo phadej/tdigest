@@ -112,7 +112,7 @@ getCentroids = ($ []) . go
 -- >>> totalWeight (tdigest [1..100] :: TDigest 5)
 -- 100.0
 --
-totalWeight :: TDigest comp -> Double
+totalWeight :: TDigest comp -> Weight
 totalWeight Nil                 = 0
 totalWeight (Node _ _ _ tw _ _) = tw
 
