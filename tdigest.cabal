@@ -1,5 +1,5 @@
 name:           tdigest
-version:        0.0.1
+version:        0.1
 synopsis:       On-line accumulation of rank-based statistics
 description:    A new data structure for accurate on-line accumulation of rank-based statistics such as quantiles and trimmed means.
                 .
@@ -41,10 +41,12 @@ library
     , binary              >=0.7.1.0  && <0.9
     , reducers            >=3.12.1   && <3.13
     , semigroups          >=0.18.2   && <0.19
+    , semigroupoids       >=5.1      && <5.2
     , vector              >=0.11     && <0.13
     , vector-algorithms   >=0.7.0.1  && <0.8
   exposed-modules:
       Data.TDigest
+      Data.TDigest.NonEmpty
       Data.TDigest.Postprocess
       Data.TDigest.Internal.Tree
   default-language: Haskell2010

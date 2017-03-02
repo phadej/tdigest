@@ -22,9 +22,10 @@ propTDigestIsValid ds = case validate td of
     td = tdigest ds :: TDigest 2
 
 propHistogramIsValid :: [Double] -> Property
-propHistogramIsValid ds = case validateHistogram $ histogram td of
-    Right _  -> property True
-    Left err -> counterexample msg $ property False
+propHistogramIsValid ds = case fmap validateHistogram $ histogram td of
+    Nothing         -> property True
+    Just (Right _)  -> property True
+    Just (Left err) -> counterexample msg $ property False
       where
         msg = "Error: "   ++ err     ++ ", " ++
               "TDigest: " ++ show td
