@@ -1,7 +1,9 @@
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 module Main (main, tdigestBinSize) where
 
 import Prelude ()
@@ -10,17 +12,18 @@ import Control.Monad               (join, replicateM)
 import Control.Monad.ST            (runST)
 import Control.Parallel.Strategies (parList, rseq, using)
 import Data.Foldable               (for_)
-import Data.List                   (sort)
+import Data.List                   (foldl', sort)
 import Data.Machine
 import Data.Machine.Runner         (runT1)
 import Data.Maybe                  (fromMaybe)
-import Data.Monoid                 ((<>))
 import Data.Proxy                  (Proxy (..))
+import Data.Semigroup              (Semigroup (..))
+import Data.Semigroup.Reducer      (Reducer (..))
 import Data.Time                   (diffUTCTime, getCurrentTime)
 import Data.Word                   (Word32)
 import GHC.TypeLits                (KnownNat, SomeNat (..), natVal, someNatVal)
 import Numeric                     (showFFloat)
-import Statistics.Distribution     (cumulative, ContDistr (..), ContGen (..))
+import Statistics.Distribution     (ContDistr (..), ContGen (..), cumulative)
 
 import Statistics.Distribution.Exponential (exponential)
 import Statistics.Distribution.Gamma       (gammaDistr)
@@ -45,9 +48,12 @@ import Data.TDigest
 
 data Method
     = MethodAverage
+    | MethodAverageMachine
+    | MethodAverageSparking
     | MethodNaive
     | MethodVector
     | MethodTDigest
+    | MethodTDigestDirect
     | MethodTDigestBuffered
     | MethodTDigestSparking
   deriving (Show)
@@ -89,9 +95,12 @@ action m d s c iseed fp = do
             DistribStandard -> randomStream standard seed
     let method = case m of
           MethodAverage         -> pure . average
+          MethodAverageMachine  -> reducerMachine getAverage
+          MethodAverageSparking -> reducerSparkingMachine getAverage
           MethodNaive           -> pure . naiveMedian
           MethodVector          -> pure . vectorMedian
           MethodTDigest         -> reifyNat c $ tdigestMachine fp distr
+          MethodTDigestDirect   -> reifyNat c $ tdigestDirect fp distr
           MethodTDigestBuffered -> reifyNat c $ tdigestBufferedMachine fp distr
           MethodTDigestSparking -> reifyNat c $ tdigestSparkingMachine fp distr
     timed $ method input
@@ -117,10 +126,13 @@ actionParser = action
         O.short 'o' <> O.long "output" <> O.metavar ":output.svg"))
   where
     readMethod "average"  = Just MethodAverage
+    readMethod "averagem" = Just MethodAverageMachine
+    readMethod "averages" = Just MethodAverageSparking
     readMethod "naive"    = Just MethodNaive
     readMethod "vector"   = Just MethodVector
     readMethod "digest"   = Just MethodTDigest
     readMethod "tdigest"  = Just MethodTDigest
+    readMethod "direct"   = Just MethodTDigestDirect
     readMethod "buffered" = Just MethodTDigestBuffered
     readMethod "sparking" = Just MethodTDigestSparking
     readMethod _          = Nothing
@@ -165,6 +177,45 @@ vectorMedian l
         mv <- V.thaw v
         Intro.sort mv
         Just <$> VU.unsafeRead mv (VU.length mv `div` 2)
+
+reducerMachine
+    :: forall m i. (Reducer i m, Monoid m)
+    => (m -> Double) -> [i] -> IO (Maybe Double)
+reducerMachine f input = do
+    x <- runT1 machine
+    return (fmap f x)
+  where
+    machine :: MachineT IO k m
+    machine
+        =  fold snoc mempty
+        <~ source input
+
+reducerSparkingMachine
+    :: forall m i. (Reducer i m, Monoid m)
+    => (m -> Double) -> [i] -> IO (Maybe Double)
+reducerSparkingMachine f input = do
+    x <- runT1 machine
+    return (fmap f x)
+  where
+    machine :: MachineT IO k m
+    machine
+        =  fold mappend mempty
+        <~ sparking
+        <~ mapping (foldl' snoc mempty)
+        <~ buffered 10000
+        <~ source input
+
+tdigestDirect
+    :: forall comp. KnownNat comp
+    => Maybe FilePath -> SomeContDistr -> Proxy comp -> [Double] -> IO (Maybe Double)
+tdigestDirect fp d _ input = do
+    let mdigest = Just $ validate $ foldl' (flip insert) mempty input
+    case mdigest of
+        Nothing             -> return Nothing
+        Just (Left err)     -> fail $ "Validation error: " ++ err
+        Just (Right digest) -> do
+            printStats fp d (digest :: TDigest comp)
+            return $ median digest
 
 tdigestMachine
     :: forall comp. KnownNat comp
@@ -353,3 +404,26 @@ randomStream d = go
 
 initSeed :: V.Vector Word32 -> MWC.Seed
 initSeed v = runST $ MWC.initialize v >>= MWC.save
+
+-------------------------------------------------------------------------------
+-- Average
+-------------------------------------------------------------------------------
+
+data Average a = Average { _samples :: !a, getAverage :: !a }
+  deriving (Eq, Show)
+
+instance (Eq a, Fractional a) => Semigroup (Average a) where
+    a@(Average n x) <> b@(Average n' x')
+        | n == 0    = b
+        | n' == 0   = a
+        | otherwise = Average m y
+      where
+        m = n + n'
+        y = (n * x + n' * x') / m
+
+instance (Eq a, Fractional a) => Monoid (Average a) where
+    mempty = Average 0 0
+    mappend = (<>)
+
+instance (Eq a, Fractional a) => Reducer a (Average a) where
+    unit = Average 1
