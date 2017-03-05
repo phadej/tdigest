@@ -64,6 +64,10 @@ module Data.TDigest (
     -- ** Percentile
     median,
     quantile,
+    -- ** Mean & Variance
+    mean,
+    variance,
+    stddev,
     -- ** CDF
     cdf,
     icdf,
@@ -76,10 +80,18 @@ module Data.TDigest (
     ) where
 
 import Prelude ()
-import Prelude.Compat ()
+import Prelude.Compat
 
 import Data.TDigest.Internal.Tree
 import Data.TDigest.Postprocess
+
+-- | Standard deviation, square root of variance.
+--
+-- >>> stddev (tdigest $ fairshuffle [0..100] :: TDigest 10)
+-- Just 30.7...
+--
+stddev :: TDigest comp -> Maybe Double
+stddev = fmap sqrt . variance
 
 -- $setup
 -- >>> :set -XDataKinds

@@ -23,7 +23,8 @@ import Data.Time                   (diffUTCTime, getCurrentTime)
 import Data.Word                   (Word32)
 import GHC.TypeLits                (KnownNat, SomeNat (..), natVal, someNatVal)
 import Numeric                     (showFFloat)
-import Statistics.Distribution     (ContDistr (..), ContGen (..), cumulative)
+import Statistics.Distribution
+       (ContDistr (..), ContGen (..), Mean (..), Variance (..), cumulative)
 
 import Statistics.Distribution.Exponential (exponential)
 import Statistics.Distribution.Gamma       (gammaDistr)
@@ -67,7 +68,7 @@ data Distrib
   deriving (Show)
 
 data SomeContDistr where
-    SomeContDistr :: ContDistr d => d -> SomeContDistr
+    SomeContDistr :: (Mean d, Variance d, ContDistr d) => d -> SomeContDistr
 
 timed :: Show a => IO a -> IO ()
 timed mx = do
@@ -94,7 +95,7 @@ action m d s c iseed fp = do
             DistribGamma    -> randomStream (gammaDistr 0.1 0.1) seed   -- median around .0000593391
             DistribStandard -> randomStream standard seed
     let method = case m of
-          MethodAverage         -> pure . average
+          MethodAverage         -> pure . listAverage
           MethodAverageMachine  -> reducerMachine getAverage
           MethodAverageSparking -> reducerSparkingMachine getAverage
           MethodNaive           -> pure . naiveMedian
@@ -141,6 +142,7 @@ actionParser = action
     readDistrib "uniform"  = Just DistribUniform
     readDistrib "exponent" = Just DistribExponent
     readDistrib "standard" = Just DistribStandard
+    readDistrib "normal"   = Just DistribStandard
     readDistrib "gamma"    = Just DistribGamma
     readDistrib _          = Nothing
 
@@ -158,9 +160,9 @@ main = join (O.execParser opts)
 -- Methods
 -------------------------------------------------------------------------------
 
-average :: [Double] -> Maybe Double
-average []     = Nothing
-average (x:xs) = Just $ go x 1 xs
+listAverage :: [Double] -> Maybe Double
+listAverage []     = Nothing
+listAverage (x:xs) = Just $ go x 1 xs
   where
     go z _ []       = z
     go z n (y : ys) = go ((z * n + y) / (n + 1)) (n + 1) ys
@@ -279,6 +281,28 @@ printStats mfp (SomeContDistr d) digest = do
     let showFFloat' = showFFloat (Just 6)
 
     -- Extra: print quantiles
+    putStrLn "average"
+    id $ do
+        let tdigestA = fromMaybe (-1) $ Data.TDigest.mean digest
+        let analyticA = Statistics.Distribution.mean d
+        putStrLn
+            $ showFFloat' tdigestA
+            . showString " "
+            . showFFloat' analyticA
+            . showString " "
+            . showFFloat' (abs $ tdigestA - analyticA)
+            $ ""
+    putStrLn "stddev"
+    id $ do
+        let tdigestA = fromMaybe (-1) $ Data.TDigest.stddev digest
+        let analyticA = Statistics.Distribution.stdDev d
+        putStrLn
+            $ showFFloat' tdigestA
+            . showString " "
+            . showFFloat' analyticA
+            . showString " "
+            . showFFloat' (abs $ tdigestA - analyticA)
+            $ ""
     putStrLn "quantiles"
     for_ ([0.1,0.2..0.9] ++ [0.95,0.99,0.999,0.9999,0.99999]) $ \q -> do
         let tdigestQ    = fromMaybe (-1) $ Data.TDigest.quantile q digest
@@ -332,9 +356,8 @@ printStats mfp (SomeContDistr d) digest = do
             -- Chart.plot $ Chart.line "bin sizes" [tdigestBinSize digest]
 
 tdigestBinSize :: forall comp. KnownNat comp => TDigest comp -> [(Double, Double)]
-tdigestBinSize digest = flip map hist $ \(HistBin mi ma w cum) ->
-    let x = (ma + mi) / 2
-        d = ma - mi
+tdigestBinSize digest = flip map hist $ \(HistBin mi ma  x w cum) ->
+    let d = ma - mi
 
         q = (w / 2 + cum) / tw
         thr = threshold tw q
@@ -358,9 +381,8 @@ tdigestToPlot lineStyle digest = Chart.Plot
     }
   where
     hist = foldMap toList (histogram digest)
-    allPoints = flip map hist $ \(HistBin mi ma w _) ->
-        let x = (ma + mi) / 2
-            d = ma - mi
+    allPoints = flip map hist $ \(HistBin mi ma x w _) ->
+        let d = ma - mi
             y = w / d / tw
         in (x, y)
     tw = totalWeight digest
@@ -369,7 +391,7 @@ tdigestToPlot lineStyle digest = Chart.Plot
         let fillColor = Chart.blend 0.5 (Chart.opaque Chart.white) (lineStyle ^. Chart.line_color)
         let fillStyle = Chart.def & Chart.fill_color .~ fillColor
         Chart.withLineStyle lineStyle $ Chart.withFillStyle fillStyle $
-            for_ hist $ \(HistBin mi ma w _) -> do
+            for_ hist $ \(HistBin mi ma _ w _) -> do
                 let d = ma - mi
                     y = w / d / tw
                     path = Chart.rectPath $ Chart.Rect
