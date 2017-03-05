@@ -45,6 +45,10 @@ module Data.TDigest.NonEmpty (
     -- ** Percentile
     median,
     quantile,
+    -- ** Mean & variance
+    mean,
+    variance,
+    stddev,
     -- ** CDF
     cdf,
     icdf,
@@ -134,6 +138,15 @@ median = quantile 0.5
 
 quantile :: Double -> TDigest comp -> Double
 quantile q td = T.quantile' q (totalWeight td) $ histogram td
+
+mean :: TDigest comp -> Double
+mean td = T.mean' $ histogram td
+
+variance :: TDigest comp -> Double
+variance td = T.variance' $ histogram td
+
+stddev :: TDigest comp -> Double
+stddev = sqrt . variance
 
 -- | Alias of 'quantile'.
 icdf :: Double -> TDigest comp -> Double
