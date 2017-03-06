@@ -1,0 +1,43 @@
+name:           tdigest-bench
+version:        0
+synopsis:       tdigest benchmark suite
+category:       Numeric Tests
+homepage:       https://github.com/futurice/haskell-tdigest#readme
+bug-reports:    https://github.com/futurice/haskell-tdigest/issues
+author:         Oleg Grenrus <oleg.grenrus@iki.fi>
+maintainer:     Oleg Grenrus <oleg.grenrus@iki.fi>
+license:        BSD3
+license-file:   LICENSE
+tested-with:    GHC==7.8.4, GHC==7.10.3, GHC==8.0.1, GHC==8.0.2
+build-type:     Simple
+cabal-version:  >= 1.10
+
+source-repository head
+  type: git
+  location: https://github.com/futurice/haskell-tdigest
+
+executable tdigest-simple
+  main-is: Simple.hs
+  hs-source-dirs:
+     src 
+  ghc-options: -Wall -threaded
+  build-depends:
+      base
+    , tdigest
+    , tdigest-Chart
+    , base-compat
+    , deepseq
+    , binary
+    , semigroups
+    , reducers
+    , vector
+    , vector-algorithms
+    , Chart                >=1.8.1    && <1.9
+    , Chart-diagrams       >=1.8.1    && <1.9
+    , machines             >=0.6.1    && <0.7
+    , parallel             >=3.2.0.6  && <3.3
+    , mwc-random           >=0.13.4.0 && <0.14
+    , statistics           >=0.13.3.0 && <0.14
+    , time                 >=1.4.2    && <1.8
+    , optparse-applicative >=0.12.1.0 && <0.14
+  default-language: Haskell2010

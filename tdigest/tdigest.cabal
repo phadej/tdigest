@@ -88,29 +88,3 @@ test-suite doctests
     directory      >=1.0,
     doctest        >=0.11.1 && <0.12,
     filepath       >=1.2
-
-benchmark tdigest-simple
-  type: exitcode-stdio-1.0
-  main-is: Simple.hs
-  hs-source-dirs:
-      bench
-  ghc-options: -Wall -threaded
-  build-depends:
-      base
-    , tdigest
-    , base-compat
-    , deepseq
-    , binary
-    , semigroups
-    , reducers
-    , vector
-    , vector-algorithms
-    , Chart                >=1.8.1    && <1.9
-    , Chart-diagrams       >=1.8.1    && <1.9
-    , machines             >=0.6.1    && <0.7
-    , parallel             >=3.2.0.6  && <3.3
-    , mwc-random           >=0.13.4.0 && <0.14
-    , statistics           >=0.13.3.0 && <0.14
-    , time                 >=1.4.2    && <1.8
-    , optparse-applicative >=0.12.1.0 && <0.14
-  default-language: Haskell2010
