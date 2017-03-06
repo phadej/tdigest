@@ -2,6 +2,7 @@
 *.plot
 *.ps
 dist
+dist-newstyle/
 .DS_Store
 .cabal-sandbox
 cabal.sandbox.config
