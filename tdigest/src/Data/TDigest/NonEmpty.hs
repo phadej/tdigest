@@ -60,16 +60,16 @@ import Prelude.Compat
 import Control.DeepSeq         (NFData (..))
 import Control.Monad           (when)
 import Data.Binary             (Binary (..))
-import Data.Maybe              (fromMaybe)
 import Data.List.NonEmpty      (NonEmpty)
+import Data.Maybe              (fromMaybe)
 import Data.Semigroup          (Semigroup (..))
 import Data.Semigroup.Foldable (Foldable1)
 import Data.Semigroup.Reducer  (Reducer (..))
 import GHC.TypeLits            (KnownNat)
 
-import qualified Data.TDigest               as T
-import qualified Data.TDigest.Internal.Tree as T
-import qualified Data.TDigest.Postprocess   as T
+import qualified Data.TDigest             as T
+import qualified Data.TDigest.Internal    as T
+import qualified Data.TDigest.Postprocess as T
 
 newtype TDigest comp = TDigest { unEmpty :: T.TDigest comp }
 

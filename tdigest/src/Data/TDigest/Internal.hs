@@ -6,7 +6,7 @@
 --
 -- Tree implementation is based on /Adams’ Trees Revisited/ by Milan Straka
 -- <http://fox.ucw.cz/papers/bbtree/bbtree.pdf>
-module Data.TDigest.Internal.Tree where
+module Data.TDigest.Internal where
 
 import Prelude ()
 import Prelude.Compat

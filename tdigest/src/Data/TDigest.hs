@@ -82,7 +82,7 @@ module Data.TDigest (
 import Prelude ()
 import Prelude.Compat
 
-import Data.TDigest.Internal.Tree
+import Data.TDigest.Internal
 import Data.TDigest.Postprocess
 
 -- | Standard deviation, square root of variance.

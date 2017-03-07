@@ -48,7 +48,7 @@ library
       Data.TDigest
       Data.TDigest.NonEmpty
       Data.TDigest.Postprocess
-      Data.TDigest.Internal.Tree
+      Data.TDigest.Internal
   default-language: Haskell2010
   other-extensions:
       DataKinds

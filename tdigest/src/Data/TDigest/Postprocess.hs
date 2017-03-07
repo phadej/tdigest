@@ -33,7 +33,8 @@ import Data.Foldable              (toList)
 import Data.List.NonEmpty         (NonEmpty (..), nonEmpty)
 import Data.Semigroup             (Semigroup (..))
 import Data.Semigroup.Foldable    (foldMap1)
-import Data.TDigest.Internal.Tree
+
+import Data.TDigest.Internal
 
 -------------------------------------------------------------------------------
 -- Histogram
