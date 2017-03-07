@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module Graphics.Rendering.Chart.Plot.TDigest where
 
 import Prelude ()
@@ -151,4 +150,29 @@ tdigestToPlot ptd = Plot
 -- Lenses
 -------------------------------------------------------------------------------
 
-makeLenses ''PlotTDigest
+plot_tdigest_title :: Lens' (PlotTDigest comp) String
+plot_tdigest_title = lens _plot_tdigest_title $ \s x -> s { _plot_tdigest_title = x }
+
+plot_tdigest_quantiles :: Lens' (PlotTDigest comp) [Double]
+plot_tdigest_quantiles = lens _plot_tdigest_quantiles $ \s x -> s { _plot_tdigest_quantiles = x }
+
+plot_tdigest_q_line_style :: Lens' (PlotTDigest comp) LineStyle
+plot_tdigest_q_line_style = lens _plot_tdigest_q_line_style $ \s x -> s { _plot_tdigest_q_line_style = x }
+
+plot_tdigest_normalize :: Lens' (PlotTDigest comp) Bool
+plot_tdigest_normalize = lens _plot_tdigest_normalize $ \s x -> s { _plot_tdigest_normalize = x }
+
+plot_tdigest_line_style :: Lens' (PlotTDigest comp) LineStyle
+plot_tdigest_line_style = lens _plot_tdigest_line_style $ \s x -> s { _plot_tdigest_line_style = x }
+
+plot_tdigest_fill_style :: Lens' (PlotTDigest comp) FillStyle
+plot_tdigest_fill_style = lens _plot_tdigest_fill_style $ \s x -> s { _plot_tdigest_fill_style = x }
+
+plot_tdigest_deviations :: Lens' (PlotTDigest comp) (Maybe Int)
+plot_tdigest_deviations = lens _plot_tdigest_deviations $ \s x -> s { _plot_tdigest_deviations = x }
+
+plot_tdigest_data :: Lens (PlotTDigest comp) (PlotTDigest comp') (TDigest comp) (TDigest comp')
+plot_tdigest_data = lens _plot_tdigest_data $ \s x -> s { _plot_tdigest_data = x }
+
+plot_tdigest_d_line_style :: Lens' (PlotTDigest comp) LineStyle
+plot_tdigest_d_line_style = lens _plot_tdigest_d_line_style $ \s x -> s { _plot_tdigest_d_line_style = x }
