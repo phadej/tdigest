@@ -20,6 +20,29 @@
 -- >>> median (forceCompress $ tdigest [1..1000] :: TDigest 25)
 -- Just 497.6...
 --
+-- === Semigroup
+--
+-- This operation isn't strictly associative, but statistical
+-- variables shouldn't be affected.
+--
+-- >>> let td xs = tdigest xs :: TDigest 10
+--
+-- >>> median (td [1..500] <> (td [501..1000] <> td [1001..1500]))
+-- Just 802...
+--
+-- >>> median ((td [1..500] <> td [501..1000]) <> td [1001..1500])
+-- Just 726...
+--
+-- The linear is worst-case scenario:
+--
+-- >>> let td' xs = tdigest (fairshuffle xs) :: TDigest 10
+--
+-- >>> median (td' [1..500] <> (td' [501..1000] <> td' [1001..1500]))
+-- Just 750.3789...
+--
+-- >>> median ((td' [1..500] <> td' [501..1000]) <> td' [1001..1500])
+-- Just 750.3789...
+--
 module Data.TDigest (
     -- * Construction
     TDigest,
@@ -97,6 +120,7 @@ stddev = fmap sqrt . variance
 -- >>> :set -XDataKinds
 -- >>> import Prelude.Compat
 -- >>> import Data.List.Compat (foldl')
+-- >>> import Data.Semigroup ((<>))
 --
 -- >>> let merge [] ys = []; merge xs [] = xs; merge (x:xs) (y:ys) = x : y : merge xs ys
 -- >>> let fairshuffle' xs = uncurry merge (splitAt (length xs `div` 2) xs)
