@@ -13,7 +13,6 @@ Just 499.0090729817737
 
 ## Benchmarks
 
-
 Using 50M exponentially distributed numbers:
 
 - average: **16s**; incorrect approximation of median, mostly to measure prng speed
@@ -22,7 +21,7 @@ Using 50M exponentially distributed numbers:
 - buffered t-digest: **68s**
 - sequential t-digest: **65s**
 
-### Example histogram
+## Example histogram
 
 ```
 tdigest-simple -m tdigest -d standard -s 100000 -c 10 -o output.svg -i 34
