@@ -1,3 +1,5 @@
 resolver: nightly-2017-02-01
 packages:
-- '.'
+- tdigest
+- tdigest-Chart
+- tdigest-bench

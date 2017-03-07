@@ -10,14 +10,14 @@
 -- === Examples
 --
 -- >>> quantile 0.99 (tdigest [1..1000] :: TDigest 25)
--- Just 990.499...
+-- Just 990.5
 --
 -- >>> quantile 0.99 (tdigest [1..1000] :: TDigest 3)
--- Just 992.3...
+-- Just 989.0...
 --
 -- t-Digest is more precise in tails, especially median is imprecise:
 --
--- >>> median (tdigest [1..1000] :: TDigest 25)
+-- >>> median (forceCompress $ tdigest [1..1000] :: TDigest 25)
 -- Just 497.6...
 --
 module Data.TDigest (
@@ -88,7 +88,7 @@ import Data.TDigest.Postprocess
 -- | Standard deviation, square root of variance.
 --
 -- >>> stddev (tdigest $ fairshuffle [0..100] :: TDigest 10)
--- Just 30.7...
+-- Just 29.1...
 --
 stddev :: TDigest comp -> Maybe Double
 stddev = fmap sqrt . variance

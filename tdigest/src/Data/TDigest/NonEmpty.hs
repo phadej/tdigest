@@ -11,14 +11,14 @@
 -- === Examples
 --
 -- >>> quantile 0.99 (tdigest (1 :| [2..1000]) :: TDigest 25)
--- 990.499...
+-- 990.5
 --
 -- >>> quantile 0.99 (tdigest (1 :| [2..1000]) :: TDigest 3)
--- 992.3...
+-- 989.0...
 --
 -- t-Digest is more precise in tails, especially median is imprecise:
 --
--- >>> median (tdigest (1 :| [2..1000]) :: TDigest 25)
+-- >>> median (forceCompress $ tdigest (1 :| [2..1000]) :: TDigest 25)
 -- 497.6...
 --
 module Data.TDigest.NonEmpty (

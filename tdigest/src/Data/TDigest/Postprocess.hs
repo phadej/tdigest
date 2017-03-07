@@ -111,8 +111,8 @@ icdf = quantile
 -- | Mean.
 --
 -- >>> mean (tdigest [1..100] :: TDigest 10)
--- Just 50.6...
--- 
+-- Just 50.5
+--
 -- /Note:/ if you only need the mean, calculate it directly.
 --
 mean :: TDigest comp -> Maybe Double

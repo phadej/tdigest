@@ -40,6 +40,7 @@ import qualified System.Random.MWC            as MWC
 import qualified Graphics.Rendering.Chart.Backend.Diagrams as Chart
 import           Graphics.Rendering.Chart.Easy             ((&), (.~), (^.))
 import qualified Graphics.Rendering.Chart.Easy             as Chart
+import qualified Graphics.Rendering.Chart.Plot.TDigest     as Chart
 
 import Data.TDigest
 
@@ -351,7 +352,8 @@ printStats mfp (SomeContDistr d) digest = do
             Chart.layout_title Chart..= "Histogram"
             color <- Chart.takeColor
             let lineStyle = Chart.def & Chart.line_color .~ color
-            Chart.plot $ pure $ tdigestToPlot lineStyle digest
+            Chart.tdigestPlot' "tdigest" digest
+            -- Chart.plot $ pure $ tdigestToPlot lineStyle digest
             Chart.plot $ Chart.line "theoretical" [map (\x -> (x, density d x)) points]
             -- Chart.plot $ Chart.line "bin sizes" [tdigestBinSize digest]
 
