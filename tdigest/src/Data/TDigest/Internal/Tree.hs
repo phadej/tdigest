@@ -496,7 +496,7 @@ singleton x = insert x emptyTDigest
 
 -- | Strict 'foldl'' over 'Foldable' structure.
 tdigest :: (Foldable f, KnownNat comp) => f Double -> TDigest comp
-tdigest = forceCompress . foldl' insertChunk emptyTDigest . chunks . toList
+tdigest = foldl' insertChunk emptyTDigest . chunks . toList
   where
     -- compress after each chunk, forceCompress at the very end.
     insertChunk td xs =
