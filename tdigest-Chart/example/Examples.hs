@@ -19,7 +19,6 @@ import qualified System.Random.MWC                         as MWC
 example1 :: IO ()
 example1 = do
     xs <- randomStream standard
-    -- TODO: should use tdigest
     let td = tdigest xs :: TDigest 10
     Chart.toFile Chart.def "example1.svg" $ do
         Chart.layout_title Chart..= "Normal distribution"
@@ -32,7 +31,6 @@ example1 = do
 example2 :: IO ()
 example2 = do
     xs <- randomStream $ chiSquared 5
-    -- TODO: should use tdigest
     let td = tdigest xs :: TDigest 10
     Chart.toFile Chart.def "example2.svg" $ do
         Chart.layout_title Chart..= "Chi-squared distribution, k = 5"
