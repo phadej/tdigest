@@ -7,7 +7,7 @@ description:
   @
   ...
   @
-category:       Numeric Graphics
+category:       Numeric, Graphics
 homepage:       https://github.com/futurice/haskell-tdigest#readme
 bug-reports:    https://github.com/futurice/haskell-tdigest/issues
 author:         Oleg Grenrus <oleg.grenrus@iki.fi>
