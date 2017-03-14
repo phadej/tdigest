@@ -276,7 +276,7 @@ tdigestSparkingMachine fp d _ input = do
         <~ buffered 10000
         <~ source input
 
-printStats :: KnownNat comp => Maybe FilePath -> SomeContDistr -> TDigest comp -> IO ()
+printStats :: Maybe FilePath -> SomeContDistr -> TDigest comp -> IO ()
 printStats mfp (SomeContDistr d) digest = do
     let showFFloat' = showFFloat (Just 6)
 
