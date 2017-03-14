@@ -38,7 +38,6 @@ import qualified Options.Applicative          as O
 import qualified System.Random.MWC            as MWC
 
 import qualified Graphics.Rendering.Chart.Backend.Diagrams as Chart
-import           Graphics.Rendering.Chart.Easy             ((&), (.~), (^.))
 import qualified Graphics.Rendering.Chart.Easy             as Chart
 import qualified Graphics.Rendering.Chart.Plot.TDigest     as Chart
 
@@ -350,10 +349,7 @@ printStats mfp (SomeContDistr d) digest = do
         putStrLn $ "Writing to " ++ fp
         Chart.toFile Chart.def fp $ do
             Chart.layout_title Chart..= "Histogram"
-            color <- Chart.takeColor
-            let lineStyle = Chart.def & Chart.line_color .~ color
             Chart.tdigestPlot' "tdigest" digest
-            -- Chart.plot $ pure $ tdigestToPlot lineStyle digest
             Chart.plot $ Chart.line "theoretical" [map (\x -> (x, density d x)) points]
             -- Chart.plot $ Chart.line "bin sizes" [tdigestBinSize digest]
 
@@ -374,33 +370,6 @@ tdigestBinSize digest = flip map hist $ \(HistBin mi ma  x w cum) ->
     compression = fromInteger $ natVal (Proxy :: Proxy comp)
 
     threshold n q = 4 * n * q * (1 - q) / compression
-
-tdigestToPlot :: Chart.LineStyle -> TDigest comp -> Chart.Plot Double Double
-tdigestToPlot lineStyle digest = Chart.Plot
-    { Chart._plot_render     = renderHistogram
-    , Chart._plot_legend     = []
-    , Chart._plot_all_points = unzip allPoints
-    }
-  where
-    hist = foldMap toList (histogram digest)
-    allPoints = flip map hist $ \(HistBin mi ma x w _) ->
-        let d = ma - mi
-            y = w / d / tw
-        in (x, y)
-    tw = totalWeight digest
-
-    renderHistogram pmap = do
-        let fillColor = Chart.blend 0.5 (Chart.opaque Chart.white) (lineStyle ^. Chart.line_color)
-        let fillStyle = Chart.def & Chart.fill_color .~ fillColor
-        Chart.withLineStyle lineStyle $ Chart.withFillStyle fillStyle $
-            for_ hist $ \(HistBin mi ma _ w _) -> do
-                let d = ma - mi
-                    y = w / d / tw
-                    path = Chart.rectPath $ Chart.Rect
-                        (Chart.mapXY pmap (mi,0))
-                        (Chart.mapXY pmap (ma,y))
-                Chart.alignFillPath path >>= Chart.fillPath
-                Chart.alignStrokePath path >>= Chart.strokePath
 
 -------------------------------------------------------------------------------
 -- Machine additions
