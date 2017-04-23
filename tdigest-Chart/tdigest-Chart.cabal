@@ -35,7 +35,7 @@ library
     , base-compat         >=0.9.1    && <0.10
     , colour              >=2.3.3    && <2.4
     , semigroups          >=0.18.2   && <0.19
-    , semigroupoids       >=5.1      && <5.2
+    , semigroupoids       >=5.1      && <5.3
     , tdigest             >=0.1      && <0.2
     , lens                >=4        && <4.16
     , Chart               >=1.8.1    && <1.9
