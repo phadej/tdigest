@@ -41,7 +41,7 @@ library
     , binary              >=0.7.1.0  && <0.9
     , reducers            >=3.12.1   && <3.13
     , semigroups          >=0.18.2   && <0.19
-    , semigroupoids       >=5.1      && <5.2
+    , semigroupoids       >=5.1      && <5.3
     , vector              >=0.11     && <0.13
     , vector-algorithms   >=0.7.0.1  && <0.8
   exposed-modules:
