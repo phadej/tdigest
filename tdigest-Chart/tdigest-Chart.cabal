@@ -1,5 +1,6 @@
 name:           tdigest-Chart
 version:        0
+x-revision:     2
 synopsis:       Chart generation from tdigest
 description:
   Chart generation from tdigest.
@@ -60,4 +61,4 @@ test-suite tdigest-chart-examples
     vector,
     Chart-diagrams       >=1.8.1    && <1.9,
     mwc-random           >=0.13.4.0 && <0.14,
-    statistics           >=0.13.3.0 && <0.14
+    statistics           >=0.13.3.0 && <0.15

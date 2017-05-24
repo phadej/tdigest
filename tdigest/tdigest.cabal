@@ -1,5 +1,6 @@
 name:           tdigest
 version:        0.1
+x-revision:     1
 synopsis:       On-line accumulation of rank-based statistics
 description:    A new data structure for accurate on-line accumulation of rank-based statistics such as quantiles and trimmed means.
                 .
