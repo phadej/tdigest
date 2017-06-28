@@ -1,6 +1,6 @@
 name:           tdigest-Chart
 version:        0
-x-revision:     2
+x-revision:     3
 synopsis:       Chart generation from tdigest
 description:
   Chart generation from tdigest.
@@ -32,7 +32,7 @@ library
       src
   ghc-options: -Wall
   build-depends:
-      base                >=4.7      && <4.10
+      base                >=4.7      && <4.11
     , base-compat         >=0.9.1    && <0.10
     , colour              >=2.3.3    && <2.4
     , semigroups          >=0.18.2   && <0.19
