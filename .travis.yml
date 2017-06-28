@@ -75,7 +75,7 @@ script:
  - $(find dist-newstyle -type f -executable -name doctests | head -n 1)
 
  # Then we build tdigest and tdigest-Chart
- - "echo packages: tdigest tdigest-Chart > cabal.project"
+ - if [ ! ${HC} = "ghc-8.2.1" ]; then echo packages: tdigest tdigest-Chart > cabal.project"; fi
  - cabal new-build -w ${HC} --disable-tests --disable-benchmarks all
  - cabal new-build -w ${HC} --enable-tests --disable-benchmarks All
  - $(find dist-newstyle -type f -executable -name tdigest-tests | head -n 1)
