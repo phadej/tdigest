@@ -1,24 +1,25 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Graphics.Rendering.Chart.Plot.TDigest where
 
+import Control.Lens
+import Data.Colour              (black, dissolve, opaque)
+import Data.Foldable            (for_, toList)
+import Data.List.NonEmpty       (NonEmpty)
+import Data.Semigroup           (Max (..))
+import Data.Semigroup.Foldable  (foldMap1)
+import Data.TDigest.Postprocess
+import Numeric                  (showFFloat)
 import Prelude ()
 import Prelude.Compat
-import Control.Lens
-import Data.Colour (opaque, black)
-import Data.Foldable (toList, for_)
-import Data.Semigroup (Max (..))
-import Data.Semigroup.Foldable (foldMap1)
-import Data.TDigest
-import Data.TDigest.Postprocess
-import Numeric                     (showFFloat)
 
 import Graphics.Rendering.Chart.Drawing
 import Graphics.Rendering.Chart.Geometry
-import Graphics.Rendering.Chart.Plot.Types
 import Graphics.Rendering.Chart.Layout
+import Graphics.Rendering.Chart.Plot.Types
 import Graphics.Rendering.Chart.State
 
-data PlotTDigest comp = PlotTDigest
-    { _plot_tdigest_data         :: TDigest comp  -- ^ Plot tdigest, i.e .data
+data PlotTDigest td = PlotTDigest
+    { _plot_tdigest_data         :: td            -- ^ Plot tdigest, i.e .data
     , _plot_tdigest_normalize    :: Bool          -- ^ Normalize histogram so total weight is 1.
     , _plot_tdigest_title        :: String        -- ^ Plot tile
     , _plot_tdigest_fill_style   :: FillStyle     -- ^ Fill style of the bins
@@ -30,25 +31,25 @@ data PlotTDigest comp = PlotTDigest
     }
 
 -- | Construct a bar chart with the given title and tdigest, using the next available colors
-tdigestPlot :: String -> TDigest comp -> EC l (PlotTDigest comp)
+tdigestPlot :: String -> td -> EC l (PlotTDigest td)
 tdigestPlot title td = do
     color <- takeColor
     pure $ PlotTDigest
         { _plot_tdigest_data         = td
         , _plot_tdigest_normalize    = False
         , _plot_tdigest_title        = title
-        , _plot_tdigest_fill_style   = solidFillStyle color
-        , _plot_tdigest_line_style   = solidLine 1.0 $ opaque black
+        , _plot_tdigest_fill_style   = solidFillStyle (dissolve 0.375 color)
+        , _plot_tdigest_line_style   = solidLine 1.0 color
         , _plot_tdigest_quantiles    = []
         , _plot_tdigest_q_line_style = dashedLine 1.0 [1,1] $ opaque black
         , _plot_tdigest_deviations   = Nothing
         , _plot_tdigest_d_line_style = dashedLine 1.0 [5,5] $ opaque black
         }
 
-tdigestPlot' :: String -> TDigest comp -> EC (Layout Double Double) ()
+tdigestPlot' :: HasHistogram td f => String -> td -> EC (Layout Double Double) ()
 tdigestPlot' title td = plot (fmap tdigestToPlot (tdigestPlot title td))
 
-tdigestToPlot :: PlotTDigest comp -> Plot Double Double
+tdigestToPlot :: forall td f. HasHistogram td f => PlotTDigest td -> Plot Double Double
 tdigestToPlot ptd = Plot
     { _plot_render     = renderHistogram
     , _plot_legend     =
@@ -59,8 +60,8 @@ tdigestToPlot ptd = Plot
     }
   where
     td         = _plot_tdigest_data ptd
-    hist'      = histogram td
-    hist       = foldMap toList hist'
+    hist'      = histogram td :: f (NonEmpty HistBin)
+    hist       = affine [] toList hist' :: [HistBin]
     lineStyle  = _plot_tdigest_line_style ptd
     fillStyle  = _plot_tdigest_fill_style ptd
     qLineStyle = _plot_tdigest_q_line_style ptd
@@ -73,15 +74,14 @@ tdigestToPlot ptd = Plot
        | otherwise                   = 1.0
 
     maxy = maxy' * 1.1
-    maxy' = maybe 1.0 (getMax . foldMap1 (Max . f)) hist'
+    maxy' = affine 1.0 (getMax . foldMap1 (Max . f)) hist'
       where
         f (HistBin mi ma _ w _) =  w / (ma - mi) / tw
 
     somex = 0
 
-    sigma = maybe 0 (sqrt . variance') hist'
-    mu    = maybe 9 mean' hist'
-
+    sigma = affine 0 (runIdentity . stddev) hist'
+    mu    = affine 9 (runIdentity . mean) hist'
 
     allPoints = ((somex, maxy) :) $ flip map hist $ \(HistBin mi ma x w _) ->
         let d = ma - mi
@@ -112,7 +112,7 @@ tdigestToPlot ptd = Plot
     quantileTitle q
         = showFFloat' q
         . showString "q = "
-        . showFFloat' (maybe 0 (quantile' q tw') hist')
+        . showFFloat' (affine 0 (runIdentity . quantile q) hist')
         $ ""
 
     renderQuantileLegend (Rect p1 p2) = withLineStyle qLineStyle $ do
@@ -120,7 +120,7 @@ tdigestToPlot ptd = Plot
         strokePath $ moveTo' (p_x p1) y `mappend` lineTo' (p_x p2) y
 
     renderQuantile pmap q = withLineStyle qLineStyle $ do
-        let x = maybe 0 (quantile' q tw') hist'
+        let x = affine 0 (runIdentity . quantile q) hist'
         let path = moveTo (mapXY pmap (x, 0)) `mappend` lineTo (mapXY pmap (x, maxy))
         alignStrokePath path >>= strokePath
 
@@ -150,29 +150,29 @@ tdigestToPlot ptd = Plot
 -- Lenses
 -------------------------------------------------------------------------------
 
-plot_tdigest_title :: Lens' (PlotTDigest comp) String
+plot_tdigest_title :: Lens' (PlotTDigest td) String
 plot_tdigest_title = lens _plot_tdigest_title $ \s x -> s { _plot_tdigest_title = x }
 
-plot_tdigest_quantiles :: Lens' (PlotTDigest comp) [Double]
+plot_tdigest_quantiles :: Lens' (PlotTDigest td) [Double]
 plot_tdigest_quantiles = lens _plot_tdigest_quantiles $ \s x -> s { _plot_tdigest_quantiles = x }
 
-plot_tdigest_q_line_style :: Lens' (PlotTDigest comp) LineStyle
+plot_tdigest_q_line_style :: Lens' (PlotTDigest td) LineStyle
 plot_tdigest_q_line_style = lens _plot_tdigest_q_line_style $ \s x -> s { _plot_tdigest_q_line_style = x }
 
-plot_tdigest_normalize :: Lens' (PlotTDigest comp) Bool
+plot_tdigest_normalize :: Lens' (PlotTDigest td) Bool
 plot_tdigest_normalize = lens _plot_tdigest_normalize $ \s x -> s { _plot_tdigest_normalize = x }
 
-plot_tdigest_line_style :: Lens' (PlotTDigest comp) LineStyle
+plot_tdigest_line_style :: Lens' (PlotTDigest td) LineStyle
 plot_tdigest_line_style = lens _plot_tdigest_line_style $ \s x -> s { _plot_tdigest_line_style = x }
 
-plot_tdigest_fill_style :: Lens' (PlotTDigest comp) FillStyle
+plot_tdigest_fill_style :: Lens' (PlotTDigest td) FillStyle
 plot_tdigest_fill_style = lens _plot_tdigest_fill_style $ \s x -> s { _plot_tdigest_fill_style = x }
 
-plot_tdigest_deviations :: Lens' (PlotTDigest comp) (Maybe Int)
+plot_tdigest_deviations :: Lens' (PlotTDigest td) (Maybe Int)
 plot_tdigest_deviations = lens _plot_tdigest_deviations $ \s x -> s { _plot_tdigest_deviations = x }
 
-plot_tdigest_data :: Lens (PlotTDigest comp) (PlotTDigest comp') (TDigest comp) (TDigest comp')
+plot_tdigest_data :: Lens (PlotTDigest td) (PlotTDigest td') td td'
 plot_tdigest_data = lens _plot_tdigest_data $ \s x -> s { _plot_tdigest_data = x }
 
-plot_tdigest_d_line_style :: Lens' (PlotTDigest comp) LineStyle
+plot_tdigest_d_line_style :: Lens' (PlotTDigest td) LineStyle
 plot_tdigest_d_line_style = lens _plot_tdigest_d_line_style $ \s x -> s { _plot_tdigest_d_line_style = x }
