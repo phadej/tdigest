@@ -42,6 +42,7 @@ import qualified Graphics.Rendering.Chart.Easy             as Chart
 import qualified Graphics.Rendering.Chart.Plot.TDigest     as Chart
 
 import Data.TDigest
+import Data.TDigest.Internal (size)
 
 -------------------------------------------------------------------------------
 -- Data
@@ -279,6 +280,8 @@ tdigestSparkingMachine fp d _ input = do
 printStats :: Maybe FilePath -> SomeContDistr -> TDigest comp -> IO ()
 printStats mfp (SomeContDistr d) digest = do
     let showFFloat' = showFFloat (Just 6)
+
+    putStrLn $ "size: " ++ show (size digest)
 
     -- Extra: print quantiles
     putStrLn "average"
