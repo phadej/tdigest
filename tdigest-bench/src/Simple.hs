@@ -6,8 +6,6 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 module Main (main, tdigestBinSize) where
 
-import Prelude ()
-import Prelude.Compat
 import Control.Monad               (join, replicateM)
 import Control.Monad.ST            (runST)
 import Control.Parallel.Strategies (parList, rseq, using)
@@ -15,7 +13,6 @@ import Data.Foldable               (for_, toList)
 import Data.List                   (foldl', sort)
 import Data.Machine
 import Data.Machine.Runner         (runT1)
-import Data.Maybe                  (fromMaybe)
 import Data.Proxy                  (Proxy (..))
 import Data.Semigroup              (Semigroup (..))
 import Data.Semigroup.Reducer      (Reducer (..))
@@ -23,6 +20,8 @@ import Data.Time                   (diffUTCTime, getCurrentTime)
 import Data.Word                   (Word32)
 import GHC.TypeLits                (KnownNat, SomeNat (..), natVal, someNatVal)
 import Numeric                     (showFFloat)
+import Prelude ()
+import Prelude.Compat
 import Statistics.Distribution
        (ContDistr (..), ContGen (..), Mean (..), Variance (..), cumulative)
 
@@ -41,8 +40,9 @@ import qualified Graphics.Rendering.Chart.Backend.Diagrams as Chart
 import qualified Graphics.Rendering.Chart.Easy             as Chart
 import qualified Graphics.Rendering.Chart.Plot.TDigest     as Chart
 
-import Data.TDigest
-import Data.TDigest.Internal (size)
+import           Data.TDigest.Postprocess as PP
+import qualified Data.TDigest.Tree        as TDT
+import qualified Data.TDigest.Vector      as TDV
 
 -------------------------------------------------------------------------------
 -- Data
@@ -58,6 +58,8 @@ data Method
     | MethodTDigestDirect
     | MethodTDigestBuffered
     | MethodTDigestSparking
+
+    | MethodTDigestVecDirect
   deriving (Show)
 
 data Distrib
@@ -96,15 +98,17 @@ action m d s c iseed fp = do
             DistribGamma    -> randomStream (gammaDistr 0.1 0.1) seed   -- median around .0000593391
             DistribStandard -> randomStream standard seed
     let method = case m of
-          MethodAverage         -> pure . listAverage
-          MethodAverageMachine  -> reducerMachine getAverage
-          MethodAverageSparking -> reducerSparkingMachine getAverage
-          MethodNaive           -> pure . naiveMedian
-          MethodVector          -> pure . vectorMedian
-          MethodTDigest         -> reifyNat c $ tdigestMachine fp distr
-          MethodTDigestDirect   -> reifyNat c $ tdigestDirect fp distr
-          MethodTDigestBuffered -> reifyNat c $ tdigestBufferedMachine fp distr
-          MethodTDigestSparking -> reifyNat c $ tdigestSparkingMachine fp distr
+          MethodAverage          -> pure . listAverage
+          MethodAverageMachine   -> reducerMachine getAverage
+          MethodAverageSparking  -> reducerSparkingMachine getAverage
+          MethodNaive            -> pure . naiveMedian
+          MethodVector           -> pure . vectorMedian
+          MethodTDigest          -> reifyNat c $ tdigestMachine fp distr
+          MethodTDigestDirect    -> reifyNat c $ tdigestDirect fp distr
+          MethodTDigestBuffered  -> reifyNat c $ tdigestBufferedMachine fp distr
+          MethodTDigestSparking  -> reifyNat c $ tdigestSparkingMachine fp distr
+
+          MethodTDigestVecDirect -> reifyNat c $ tdigestVecDirect fp distr
     timed $ method input
 
 reifyNat :: forall x. Int -> (forall n. KnownNat n => Proxy n -> x) -> x
@@ -127,17 +131,18 @@ actionParser = action
     <*> O.optional (O.strOption (
         O.short 'o' <> O.long "output" <> O.metavar ":output.svg"))
   where
-    readMethod "average"  = Just MethodAverage
-    readMethod "averagem" = Just MethodAverageMachine
-    readMethod "averages" = Just MethodAverageSparking
-    readMethod "naive"    = Just MethodNaive
-    readMethod "vector"   = Just MethodVector
-    readMethod "digest"   = Just MethodTDigest
-    readMethod "tdigest"  = Just MethodTDigest
-    readMethod "direct"   = Just MethodTDigestDirect
-    readMethod "buffered" = Just MethodTDigestBuffered
-    readMethod "sparking" = Just MethodTDigestSparking
-    readMethod _          = Nothing
+    readMethod "average"    = Just MethodAverage
+    readMethod "averagem"   = Just MethodAverageMachine
+    readMethod "averages"   = Just MethodAverageSparking
+    readMethod "naive"      = Just MethodNaive
+    readMethod "vector"     = Just MethodVector
+    readMethod "digest"     = Just MethodTDigest
+    readMethod "tdigest"    = Just MethodTDigest
+    readMethod "direct"     = Just MethodTDigestDirect
+    readMethod "buffered"   = Just MethodTDigestBuffered
+    readMethod "sparking"   = Just MethodTDigestSparking
+    readMethod "vec-direct" = Just MethodTDigestVecDirect
+    readMethod _            = Nothing
 
     readDistrib "incr"     = Just DistribIncr
     readDistrib "uniform"  = Just DistribUniform
@@ -212,47 +217,59 @@ tdigestDirect
     :: forall comp. KnownNat comp
     => Maybe FilePath -> SomeContDistr -> Proxy comp -> [Double] -> IO (Maybe Double)
 tdigestDirect fp d _ input = do
-    let mdigest = Just $ validate $ foldl' (flip insert) mempty input
+    let mdigest = Just $ TDT.validate $ foldl' (flip TDT.insert) mempty input
     case mdigest of
         Nothing             -> return Nothing
         Just (Left err)     -> fail $ "Validation error: " ++ err
         Just (Right digest) -> do
-            printStats fp d (digest :: TDigest comp)
+            printStats treeLike fp d (digest :: TDT.TDigest comp)
             return $ median digest
+
+tdigestVecDirect
+    :: forall comp. KnownNat comp
+    => Maybe FilePath -> SomeContDistr -> Proxy comp -> [Double] -> IO (Maybe Double)
+tdigestVecDirect fp d _ input = do
+    let mdigest = Just $ TDV.validate $ foldl' (flip TDV.insert) mempty input
+    case mdigest of
+        Nothing             -> return Nothing
+        Just (Left err)     -> fail $ "Validation error: " ++ err
+        Just (Right digest) -> do
+            printStats vectorLike fp d (digest :: TDV.TDigest comp)
+            return $ TDV.median digest
 
 tdigestMachine
     :: forall comp. KnownNat comp
     => Maybe FilePath -> SomeContDistr -> Proxy comp -> [Double] -> IO (Maybe Double)
 tdigestMachine fp d _ input = do
-    mdigest <- fmap validate <$> runT1 machine
+    mdigest <- fmap TDT.validate <$> runT1 machine
     case mdigest of
         Nothing             -> return Nothing
         Just (Left err)     -> fail $ "Validation error: " ++ err
         Just (Right digest) -> do
-            printStats fp d digest
+            printStats treeLike fp d digest
             return $ median digest
   where
-    machine :: MachineT IO k (TDigest comp)
+    machine :: MachineT IO k (TDT.TDigest comp)
     machine
-        =  fold (flip insert) mempty
+        =  fold (flip TDT.insert) mempty
         <~ source input
 
 tdigestBufferedMachine
     :: forall comp. KnownNat comp
     => Maybe FilePath -> SomeContDistr -> Proxy comp -> [Double] -> IO (Maybe Double)
 tdigestBufferedMachine fp d _ input = do
-    mdigest <- fmap validate <$> runT1 machine
+    mdigest <- fmap TDT.validate <$> runT1 machine
     case mdigest of
         Nothing             -> return Nothing
         Just (Left err)     -> fail $ "Validation error: " ++ err
         Just (Right digest) -> do
-            printStats fp d digest
+            printStats treeLike fp d digest
             return $ median digest
   where
-    machine :: MachineT IO k (TDigest comp)
+    machine :: MachineT IO k (TDT.TDigest comp)
     machine
         =  fold mappend mempty
-        <~ mapping tdigest
+        <~ mapping TDT.tdigest
         <~ buffered 10000
         <~ source input
 
@@ -261,33 +278,53 @@ tdigestSparkingMachine
     :: forall comp. KnownNat comp
     => Maybe FilePath -> SomeContDistr -> Proxy comp -> [Double] -> IO (Maybe Double)
 tdigestSparkingMachine fp d _ input = do
-    mdigest <- fmap validate <$> runT1 machine
+    mdigest <- fmap TDT.validate <$> runT1 machine
     case mdigest of
         Nothing             -> return Nothing
         Just (Left err)     -> fail $ "Validation error: " ++ err
         Just (Right digest) -> do
-            printStats fp d digest
+            printStats treeLike fp d digest
             return $ median digest
   where
-    machine :: MachineT IO k (TDigest comp)
+    machine :: MachineT IO k (TDT.TDigest comp)
     machine
         =  fold mappend mempty
         <~ sparking
-        <~ mapping tdigest
+        <~ mapping TDT.tdigest
         <~ buffered 10000
         <~ source input
 
-printStats :: Maybe FilePath -> SomeContDistr -> TDigest comp -> IO ()
-printStats mfp (SomeContDistr d) digest = do
+data TDigestLike a = TDigestLike
+    { maximumValue :: a -> Double
+    , minimumValue :: a -> Double
+    , size         :: a -> Int
+    }
+
+treeLike :: TDigestLike (TDT.TDigest comp)
+treeLike = TDigestLike
+    { maximumValue = TDT.maximumValue
+    , minimumValue = TDT.minimumValue
+    , size         = TDT.size
+    }
+
+vectorLike :: KnownNat comp => TDigestLike (TDV.TDigest comp)
+vectorLike = TDigestLike
+    { maximumValue = TDV.maximumValue
+    , minimumValue = TDV.minimumValue
+    , size         = TDV.size
+    }
+
+printStats :: HasHistogram a f => TDigestLike a -> Maybe FilePath -> SomeContDistr -> a -> IO ()
+printStats tdl mfp (SomeContDistr d) digest = do
     let showFFloat' = showFFloat (Just 6)
 
-    putStrLn $ "size: " ++ show (size digest)
+    putStrLn $ "size: " ++ show (size tdl digest)
 
     -- Extra: print quantiles
     putStrLn "average"
     id $ do
-        let tdigestA = fromMaybe (-1) $ Data.TDigest.mean digest
-        let analyticA = Statistics.Distribution.mean d
+        let tdigestA = fromAffine (-1) $ PP.mean digest :: Double
+        let analyticA = Statistics.Distribution.mean d :: Double
         putStrLn
             $ showFFloat' tdigestA
             . showString " "
@@ -297,7 +334,7 @@ printStats mfp (SomeContDistr d) digest = do
             $ ""
     putStrLn "stddev"
     id $ do
-        let tdigestA = fromMaybe (-1) $ Data.TDigest.stddev digest
+        let tdigestA = fromAffine (-1) $ PP.stddev digest
         let analyticA = Statistics.Distribution.stdDev d
         putStrLn
             $ showFFloat' tdigestA
@@ -308,7 +345,7 @@ printStats mfp (SomeContDistr d) digest = do
             $ ""
     putStrLn "quantiles"
     for_ ([0.1,0.2..0.9] ++ [0.95,0.99,0.999,0.9999,0.99999]) $ \q -> do
-        let tdigestQ    = fromMaybe (-1) $ Data.TDigest.quantile q digest
+        let tdigestQ    = fromAffine (-1) $ PP.quantile q digest
         let analyticQ   = Statistics.Distribution.quantile d q
         putStrLn
             $ showFFloat' q
@@ -332,8 +369,10 @@ printStats mfp (SomeContDistr d) digest = do
             . showString " "
             . showFFloat' (abs $ analyticC - tdigestC)
             $ ""
-    let mi = minimumValue digest
-    let ma = maximumValue digest
+    let mi = minimumValue tdl digest
+    let ma = maximumValue tdl digest
+{-
+ - TODO
     case validateHistogram <$> histogram digest of
         Nothing -> pure ()
         Just (Right _hist) -> do
@@ -343,6 +382,7 @@ printStats mfp (SomeContDistr d) digest = do
             -}
             pure ()
         Just (Left err) -> putStrLn $ "Errorneous histogram: " ++ err
+-}
     {-
     putStrLn "Debug output"
     debugPrint digest
@@ -356,7 +396,7 @@ printStats mfp (SomeContDistr d) digest = do
             Chart.plot $ Chart.line "theoretical" [map (\x -> (x, density d x)) points]
             -- Chart.plot $ Chart.line "bin sizes" [tdigestBinSize digest]
 
-tdigestBinSize :: forall comp. KnownNat comp => TDigest comp -> [(Double, Double)]
+tdigestBinSize :: forall comp. KnownNat comp => TDT.TDigest comp -> [(Double, Double)]
 tdigestBinSize digest = flip map hist $ \(HistBin mi ma  x w cum) ->
     let d = ma - mi
 

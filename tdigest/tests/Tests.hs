@@ -2,6 +2,8 @@
 module Main (main) where
 
 import Data.TDigest
+import Data.TDigest.Postprocess
+import Data.TDigest.Postprocess.Internal (validateHistogram)
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
