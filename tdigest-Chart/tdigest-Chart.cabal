@@ -1,6 +1,5 @@
 name:           tdigest-Chart
 version:        0.2
-x-revision:     2
 synopsis:       Chart generation from tdigest
 description:
   Chart generation from tdigest.
