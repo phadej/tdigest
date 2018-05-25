@@ -49,6 +49,12 @@ module Data.TDigest.Tree.NonEmpty (
     -- ** CDF
     cdf,
     icdf,
+
+    -- * Debug
+    size,
+    valid,
+    validate,
+    debugPrint,
     ) where
 
 import Prelude ()
@@ -154,6 +160,18 @@ cdf = PP.cdf
 
 tdigest :: (Foldable1 f, KnownNat comp) => f Double -> TDigest comp
 tdigest = TDigest . T.tdigest
+
+size :: TDigest comp -> Int
+size = T.size . unEmpty
+
+valid :: TDigest comp -> Bool
+valid = T.valid . unEmpty
+
+validate :: TDigest comp -> Either String (TDigest comp)
+validate = fmap TDigest . T.validate . unEmpty
+
+debugPrint :: TDigest comp -> IO ()
+debugPrint = T.debugPrint . unEmpty
 
 -- $setup
 -- >>> :set -XDataKinds
