@@ -46,7 +46,7 @@ library
     , semigroupoids       >=5.2.2    && <5.3
     , tdigest             >=0.2      && <0.3
     , lens                >=4.16.1   && <4.17
-    , Chart               >=1.8.3    && <1.9
+    , Chart               >=1.8.3    && <1.10
 
   exposed-modules:
       Graphics.Rendering.Chart.Plot.TDigest
@@ -67,6 +67,6 @@ test-suite tdigest-chart-examples
     tdigest,
     tdigest-Chart,
     vector,
-    Chart-diagrams       >=1.8.1    && <1.9,
+    Chart-diagrams       >=1.8.1    && <1.10,
     mwc-random           >=0.13.4.0 && <0.14,
     statistics           >=0.13.3.0 && <0.15
