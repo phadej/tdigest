@@ -96,7 +96,7 @@ test-suite tdigest-tests
     semigroups,
     vector,
     vector-algorithms,
-    tasty            >=0.11.0.4 && <1.1,
+    tasty            >=0.11.0.4 && <1.2,
     tasty-quickcheck >=0.8.4    && <0.11
 
 test-suite doctests
