@@ -1,5 +1,8 @@
+cabal-version:  >= 1.10
 name:           tdigest-Chart
 version:        0.2
+x-revision:     1
+
 synopsis:       Chart generation from tdigest
 description:
   Chart generation from tdigest.
@@ -16,7 +19,6 @@ license:        BSD3
 license-file:   LICENSE
 tested-with:    GHC==7.8.4, GHC==7.10.3, GHC==8.0.1, GHC==8.0.2, GHC==8.2.2, GHC==8.4.1
 build-type:     Simple
-cabal-version:  >= 1.10
 
 extra-source-files:
     README.md
@@ -43,9 +45,9 @@ library
   build-depends:
       base-compat         >=0.10.1   && <0.11
     , colour              >=2.3.3    && <2.4
-    , semigroupoids       >=5.2.2    && <5.3
+    , semigroupoids       >=5.2.2    && <5.4
     , tdigest             >=0.2      && <0.3
-    , lens                >=4.15.4   && <4.17
+    , lens                >=4.15.4   && <4.18
     , Chart               >=1.8.3    && <1.10
 
   exposed-modules:
