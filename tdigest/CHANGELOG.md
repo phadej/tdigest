@@ -1,3 +1,8 @@
+## 0.2.1
+
+- Add size, valid, validate, and debugPrint for NonEmpty
+  [#26](https://github.com/futurice/haskell-tdigest/pull/26)
+
 ## 0.2
 
 - Add `Data.TDigest.Vector` module.
