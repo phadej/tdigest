@@ -3,7 +3,9 @@ packages:
   tdigest-Chart
   tdigest-bench
 
---allow-newer:
---  diagrams-lib:lens,
---  diagrams-svg:lens,
---  diagrams-postscript:lens
+allow-newer:
+  Chart:lens,
+  Chart:template-haskell,
+  Chart-diagrams:lens,
+  diagrams-postscript:base,
+  diagrams-postscript:lens

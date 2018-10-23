@@ -17,7 +17,7 @@ author:         Oleg Grenrus <oleg.grenrus@iki.fi>
 maintainer:     Oleg Grenrus <oleg.grenrus@iki.fi>
 license:        BSD3
 license-file:   LICENSE
-tested-with:    GHC==7.8.4, GHC==7.10.3, GHC==8.0.1, GHC==8.0.2, GHC==8.2.2, GHC==8.4.1
+tested-with:    GHC==7.8.4, GHC==7.10.3, GHC==8.0.1, GHC==8.0.2, GHC==8.2.2, GHC==8.4.4, GHC==8.6.1
 build-type:     Simple
 
 extra-source-files:
@@ -35,7 +35,7 @@ library
 
   -- GHC boot libraries
   build-depends:
-      base                >=4.7      && <4.12
+      base                >=4.7      && <4.13
 
   if !impl(ghc >= 8.0)
     build-depends:
@@ -70,5 +70,5 @@ test-suite tdigest-chart-examples
     tdigest-Chart,
     vector,
     Chart-diagrams       >=1.8.1    && <1.10,
-    mwc-random           >=0.13.4.0 && <0.14,
-    statistics           >=0.13.3.0 && <0.15
+    mwc-random           >=0.13.4.0 && <0.15,
+    statistics           >=0.13.3.0 && <0.16
