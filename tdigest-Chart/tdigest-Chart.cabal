@@ -17,9 +17,8 @@ author:         Oleg Grenrus <oleg.grenrus@iki.fi>
 maintainer:     Oleg Grenrus <oleg.grenrus@iki.fi>
 license:        BSD3
 license-file:   LICENSE
-tested-with:    GHC==7.10.3, GHC==8.0.1, GHC==8.0.2, GHC==8.2.2, GHC==8.4.4
+tested-with:    GHC==7.10.3, GHC==8.0.1, GHC==8.0.2, GHC==8.2.2, GHC==8.4.4, GHC==8.6.4
 build-type:     Simple
-
 extra-source-files:
     README.md
     CHANGELOG.md
@@ -35,7 +34,7 @@ library
 
   -- GHC boot libraries
   build-depends:
-      base                >=4.7      && <4.12
+      base                >=4.7      && <4.13
 
   if !impl(ghc >= 8.0)
     build-depends:
