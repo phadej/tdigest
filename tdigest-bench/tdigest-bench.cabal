@@ -13,7 +13,7 @@ author:         Oleg Grenrus <oleg.grenrus@iki.fi>
 maintainer:     Oleg Grenrus <oleg.grenrus@iki.fi>
 license:        BSD3
 license-file:   LICENSE
-tested-with:    GHC==7.10.3, GHC==8.0.1, GHC==8.0.2, GHC==8.2.2, GHC==8.4.4, GHC==8.6.4
+tested-with:    GHC==7.10.3, GHC==8.0.1, GHC==8.0.2, GHC==8.2.2, GHC==8.4.4, GHC==8.6.5, GHC==8.8.1
 build-type:     Simple
 
 source-repository head
@@ -38,7 +38,7 @@ executable tdigest-simple
     , vector-algorithms
     , Chart                >=1.8.1    && <1.10
     , Chart-diagrams       >=1.8.1    && <1.10
-    , machines             >=0.6.1    && <0.7
+    , machines             >=0.6.1    && <0.8
     , parallel             >=3.2.0.6  && <3.3
     , mwc-random           >=0.13.4.0 && <0.15
     , statistics           >=0.13.3.0 && <0.16
