@@ -7,3 +7,6 @@ packages:
 --  diagrams-lib:lens,
 --  diagrams-svg:lens,
 --  diagrams-postscript:lens
+
+allow-newer: lens:base
+allow-newer: lens:template-haskell
