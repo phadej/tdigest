@@ -195,7 +195,7 @@ insertCentroid (mean, weight) td = go 0 mean weight False td
             Nil -> case mrw of
                 Nothing     -> node' s nx nw (tw + newW) Nil r
                 Just rw     -> balanceL nx nw (go cum newX rw True Nil) r
-            Node _ _ _ _ _ _
+            Node {}
                 | lmax < newX && abs (newX - x) < abs (newX - lmax) {- && newX < x -} -> case mrw of
                     Nothing -> node' s nx nw (tw + nw - w) l r
                     -- in this two last LT cases, we have to recalculate size
@@ -210,7 +210,7 @@ insertCentroid (mean, weight) td = go 0 mean weight False td
             Nil -> case mrw of
                 Nothing     -> node' s nx nw (tw + newW) l Nil
                 Just rw     -> balanceR nx nw l (go (cum + totalWeight l + nw) newX rw True Nil)
-            Node _ _ _ _ _ _
+            Node {}
                 | rmin > newX && abs (newX - x) < abs (newX - rmin) {- && newX > x -} -> case mrw of
                     Nothing -> node' s nx nw (tw + newW) l r
                     -- in this two last GT cases, we have to recalculate size
@@ -236,7 +236,7 @@ insertCentroid (mean, weight) td = go 0 mean weight False td
                      $ w + newW - thr
             in if diff < 0 -- i.e. there is room
                 then (newW, Nothing)
-                else (thr - w, Just $ diff)
+                else (thr - w, Just diff)
 
         -- the change of current node
         (nx, nw) = {- traceShowId $ traceShow (newX, newW, x, dw, mrw) $ -} combinedCentroid x w x dw
@@ -349,8 +349,7 @@ forceCompress td =
         v <- toMVector td
         -- sort by cumulative weight
         VHeap.sortBy (comparing snd) v
-        f <- VU.unsafeFreeze v
-        pure f
+        VU.unsafeFreeze v
 
 toMVector
     :: forall comp s. KnownNat comp

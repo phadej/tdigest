@@ -26,7 +26,7 @@ module Data.TDigest.Postprocess.Internal (
     Affine (..),
     ) where
 
-import Data.Foldable           (toList)
+import Data.Foldable           (toList, traverse_)
 import Data.Functor.Compose    (Compose (..))
 import Data.Functor.Identity   (Identity (..))
 import Data.List.NonEmpty      (NonEmpty (..), nonEmpty)
@@ -36,7 +36,7 @@ import Data.Semigroup.Foldable (foldMap1)
 import Prelude ()
 import Prelude.Compat
 
-import qualified Data.List.NonEmpty  as NE
+import qualified Data.List.NonEmpty as NE
 
 import Data.TDigest.Internal
 
@@ -169,7 +169,7 @@ cdf x n = iter
 
 -- | Validate that list of 'HistBin' is a valid "histogram".
 validateHistogram :: Foldable f => f HistBin -> Either String (f HistBin)
-validateHistogram bs = traverse validPair (pairs $ toList bs) >> pure bs
+validateHistogram bs = traverse_ validPair (pairs $ toList bs) >> pure bs
   where
     validPair (lb@(HistBin _ lmax _ lwt lcw), rb@(HistBin rmin _ _ _ rcw)) = do
         check (lmax == rmin)     "gap between bins"

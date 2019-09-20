@@ -19,9 +19,9 @@ module Data.TDigest.Postprocess (
     I.Affine (..)
     ) where
 
-import Prelude ()
-import Prelude.Compat
-import qualified Data.List.NonEmpty  as NE
+import qualified Data.List.NonEmpty as NE
+import           Prelude ()
+import           Prelude.Compat
 
 import qualified Data.TDigest.Postprocess.Internal as I
 

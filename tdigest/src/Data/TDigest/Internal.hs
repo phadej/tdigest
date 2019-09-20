@@ -12,7 +12,7 @@ type Size = Int
 
 {-# INLINE assert #-}
 assert :: Bool -> String -> a -> a
-assert _ _ = \x -> x
+assert _ _ = id
 {-
 assert False msg _ = error msg
 assert True  _   x = x

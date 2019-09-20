@@ -176,7 +176,7 @@ emptyTDigest :: TDigest comp
 emptyTDigest = TDigest 0 mempty 0 mempty True
 
 combineTDigest :: forall comp. KnownNat comp => TDigest comp -> TDigest comp -> TDigest comp
-combineTDigest (TDigest tw d _ b dir) (TDigest tw' d' _ b' dir') = 
+combineTDigest (TDigest tw d _ b dir) (TDigest tw' d' _ b' dir') =
     TDigest (tw + tw') newD 0 [] (dir /= dir')
   where
     newD = VU.fromList
@@ -235,9 +235,9 @@ validate td@(TDigest tw d bs b _dir)
     | not (bs == length b) =
         Left $ "Buffer lenght don't match: " ++ show (bs, length b)
     | not (tw == bs + round dw) =
-        Left $ "Total weight doesn't match"
+        Left "Total weight doesn't match"
     | dl /= sortBy (comparing fst) dl =
-        Left $ "Data buffer isn't ordered"
+        Left "Data buffer isn't ordered"
     | otherwise = Right td
   where
     dl :: [Centroid]
