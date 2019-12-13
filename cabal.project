@@ -3,7 +3,10 @@ packages:
   tdigest-Chart
   tdigest-bench
 
---allow-newer:
---  diagrams-lib:lens,
---  diagrams-svg:lens,
---  diagrams-postscript:lens
+tests: True
+benchmarks: True
+
+allow-newer: diagrams-postscript-1.4.1:base
+allow-newer: diagrams-postscript-1.4.1:hashable
+allow-newer: diagrams-postscript-1.4.1:statestack
+allow-newer: diagrams-postscript-1.4.1:lens

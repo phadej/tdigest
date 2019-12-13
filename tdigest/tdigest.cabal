@@ -1,7 +1,7 @@
 cabal-version:      >=1.10
 name:               tdigest
 version:            0.2.1
-x-revision:         2
+x-revision:         4
 synopsis:           On-line accumulation of rank-based statistics
 description:
   A new data structure for accurate on-line accumulation of rank-based statistics such as quantiles and trimmed means.
@@ -24,6 +24,7 @@ tested-with:
    || ==8.2.2
    || ==8.4.4
    || ==8.6.5
+   || ==8.8.1
 
 build-type:         Custom
 extra-source-files:
@@ -46,7 +47,7 @@ library
 
   -- GHC boot libraries
   build-depends:
-      base          >=4.7     && <4.13
+      base          >=4.7     && <4.14
     , binary        >=0.7.1.0 && <0.10
     , deepseq       >=1.3.0.2 && <1.5
     , transformers  >=0.3     && <0.6
@@ -56,7 +57,7 @@ library
 
   -- other dependencies
   build-depends:
-      base-compat        >=0.10.1   && <0.11
+      base-compat        >=0.10.1   && <0.12
     , reducers           >=3.12.2   && <3.13
     , semigroupoids      >=5.2.2    && <5.4
     , vector             >=0.12.0.1 && <0.13
