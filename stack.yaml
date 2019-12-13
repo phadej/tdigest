@@ -1,5 +1,0 @@
-resolver: nightly-2017-06-01
-packages:
-- tdigest
-- tdigest-Chart
-- tdigest-bench

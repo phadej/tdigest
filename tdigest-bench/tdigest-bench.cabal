@@ -17,6 +17,7 @@ tested-with:
    || ==8.2.2
    || ==8.4.4
    || ==8.6.5
+   || ==8.8.1
 
 build-type:    Simple
 
@@ -29,7 +30,7 @@ executable tdigest-simple
   hs-source-dirs:   src
   ghc-options:      -Wall -threaded
   build-depends:
-      base                  >=4.7      && <4.13
+      base                  >=4.7      && <4.14
     , base-compat
     , binary
     , Chart                 >=1.8.1    && <1.10
@@ -37,14 +38,14 @@ executable tdigest-simple
     , deepseq
     , machines              >=0.6.1    && <0.8
     , mwc-random            >=0.13.4.0 && <0.15
-    , optparse-applicative  >=0.12.1.0 && <0.15
+    , optparse-applicative  >=0.12.1.0 && <0.16
     , parallel              >=3.2.0.6  && <3.3
     , reducers
     , semigroups
     , statistics            >=0.13.3.0 && <0.16
     , tdigest
     , tdigest-Chart
-    , time                  >=1.4.2    && <1.9
+    , time                  >=1.4.2    && <1.10
     , vector
     , vector-algorithms
 
