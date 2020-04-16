@@ -6,7 +6,13 @@ packages:
 tests: True
 benchmarks: True
 
-allow-newer: diagrams-postscript-1.4.1:base
-allow-newer: diagrams-postscript-1.4.1:hashable
-allow-newer: diagrams-postscript-1.4.1:statestack
-allow-newer: diagrams-postscript-1.4.1:lens
+allow-newer: active-0.2.0.14:base
+allow-newer: diagrams-core-1.4.2:base
+allow-newer: diagrams-lib-1.4.3:base
+allow-newer: diagrams-postscript-1.5:base
+allow-newer: diagrams-solve-0.1.1:base
+allow-newer: diagrams-svg-1.4.3:base
+allow-newer: dual-tree-0.2.2.1:base
+allow-newer: monoid-extras-0.5.1:base
+allow-newer: statestack-0.3:base
+allow-newer: svg-builder-0.1.1:base
