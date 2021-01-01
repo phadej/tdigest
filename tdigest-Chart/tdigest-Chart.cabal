@@ -11,21 +11,20 @@ description:
   @
 
 category:           Numeric, Graphics
-homepage:           https://github.com/futurice/haskell-tdigest#readme
-bug-reports:        https://github.com/futurice/haskell-tdigest/issues
+homepage:           https://github.com/phadej/haskell-tdigest#readme
+bug-reports:        https://github.com/phadej/haskell-tdigest/issues
 author:             Oleg Grenrus <oleg.grenrus@iki.fi>
 maintainer:         Oleg Grenrus <oleg.grenrus@iki.fi>
 license:            BSD3
 license-file:       LICENSE
 tested-with:
   GHC ==7.10.3
-   || ==8.0.1
    || ==8.0.2
    || ==8.2.2
    || ==8.4.4
    || ==8.6.5
-   || ==8.8.3
-   || ==8.10.1
+   || ==8.8.4
+   || ==8.10.3
 
 build-type:         Simple
 extra-source-files:
@@ -34,7 +33,8 @@ extra-source-files:
 
 source-repository head
   type:     git
-  location: https://github.com/futurice/haskell-tdigest
+  location: https://github.com/phadej/haskell-tdigest
+  subdir:   tdigest-Chart
 
 library
   hs-source-dirs:   src

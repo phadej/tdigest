@@ -1,3 +1,7 @@
+## 0.2.1.1
+
+- `build-type: Simple`
+
 ## 0.2.1
 
 - Add size, valid, validate, and debugPrint for NonEmpty

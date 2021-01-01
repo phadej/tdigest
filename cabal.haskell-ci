@@ -1,0 +1,3 @@
+branches: master
+jobs-selection: any
+docspec: True
