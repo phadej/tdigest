@@ -26,6 +26,9 @@ import Data.TDigest.Vector.Internal
 
 import qualified Data.TDigest.Postprocess as PP
 
+-- $setup
+-- >>> import Data.TDigest.Vector
+
 -------------------------------------------------------------------------------
 -- Quantile
 -------------------------------------------------------------------------------

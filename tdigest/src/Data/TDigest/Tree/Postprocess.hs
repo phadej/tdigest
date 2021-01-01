@@ -25,6 +25,9 @@ import Data.TDigest.Tree.Internal
 
 import qualified Data.TDigest.Postprocess as PP
 
+-- $setup
+-- >>> import Data.TDigest.Tree
+
 -------------------------------------------------------------------------------
 -- Quantile
 -------------------------------------------------------------------------------
