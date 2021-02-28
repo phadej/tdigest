@@ -16,3 +16,9 @@ allow-newer: dual-tree-0.2.2.1:base
 allow-newer: monoid-extras-0.5.1:base
 allow-newer: statestack-0.3:base
 allow-newer: svg-builder-0.1.1:base
+
+allow-newer: lens
+
+allow-newer: diagrams-svg-1.4.3:base64-bytestring
+
+allow-newer: dual-tree-0.2.2.1:newtype-generics

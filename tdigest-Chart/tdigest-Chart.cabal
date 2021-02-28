@@ -24,7 +24,7 @@ tested-with:
    || ==8.4.4
    || ==8.6.5
    || ==8.8.4
-   || ==8.10.3
+   || ==8.10.4
 
 build-type:         Simple
 extra-source-files:
@@ -51,7 +51,7 @@ library
       base-compat    >=0.10.1 && <0.12
     , Chart          >=1.8.3  && <1.10
     , colour         >=2.3.3  && <2.4
-    , lens           >=4.15.4 && <4.20
+    , lens           >=4.15.4 && <5.1
     , semigroupoids  >=5.2.2  && <5.4
     , tdigest        >=0.2    && <0.3
 
@@ -70,7 +70,7 @@ test-suite tdigest-chart-examples
     , Chart
     , Chart-diagrams  >=1.8.1    && <1.10
     , lens
-    , mwc-random      >=0.13.4.0 && <0.15
+    , mwc-random      >=0.13.4.0 && <0.16
     , statistics      >=0.13.3.0 && <0.16
     , tdigest
     , tdigest-Chart
