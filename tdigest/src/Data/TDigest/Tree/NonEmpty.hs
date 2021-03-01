@@ -180,5 +180,5 @@ debugPrint = T.debugPrint . unEmpty
 -- >>> import Data.List.Compat (foldl')
 --
 -- >>> let merge [] ys = []; merge xs [] = xs; merge (x:xs) (y:ys) = x : y : merge xs ys
--- >>> let fairshuffle' xs = uncurry merge (splitAt (length xs `div` 2) xs)
+-- >>> let fairshuffle' xs = uncurry merge (splitAt (Prelude.length xs `div` 2) xs)
 -- >>> let fairshuffle xs = iterate fairshuffle' xs !! 5
