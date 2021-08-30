@@ -48,7 +48,7 @@ library
 
   -- other dependencies
   build-depends:
-      base-compat    >=0.10.1 && <0.12
+      base-compat    >=0.10.1 && <0.13
     , Chart          >=1.8.3  && <1.10
     , colour         >=2.3.3  && <2.4
     , lens           >=4.15.4 && <5.1
