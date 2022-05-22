@@ -17,7 +17,7 @@ tested-with:
    || ==8.4.4
    || ==8.6.5
    || ==8.8.4
-   || ==8.10.4
+   || ==8.10.7
 
 build-type:    Simple
 
@@ -40,11 +40,11 @@ executable tdigest-simple
     , deepseq
     , machines              >=0.6.1    && <0.8
     , mwc-random            >=0.13.4.0 && <0.16
-    , optparse-applicative  >=0.12.1.0 && <0.17
+    , optparse-applicative  >=0.12.1.0 && <0.18
     , parallel              >=3.2.0.6  && <3.3
     , reducers
     , semigroups
-    , statistics            >=0.13.3.0 && <0.16
+    , statistics            >=0.13.3.0 && <0.17
     , tdigest
     , tdigest-Chart
     , time                  >=1.4.2    && <1.10

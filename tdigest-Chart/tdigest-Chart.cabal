@@ -24,7 +24,7 @@ tested-with:
    || ==8.4.4
    || ==8.6.5
    || ==8.8.4
-   || ==8.10.4
+   || ==8.10.7
 
 build-type:         Simple
 extra-source-files:
@@ -71,7 +71,7 @@ test-suite tdigest-chart-examples
     , Chart-diagrams  >=1.8.1    && <1.10
     , lens
     , mwc-random      >=0.13.4.0 && <0.16
-    , statistics      >=0.13.3.0 && <0.16
+    , statistics      >=0.13.3.0 && <0.17
     , tdigest
     , tdigest-Chart
     , vector
