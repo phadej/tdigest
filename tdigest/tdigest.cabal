@@ -1,7 +1,7 @@
 cabal-version:      >=1.10
 name:               tdigest
 version:            0.2.1.1
-x-revision:         3
+x-revision:         4
 synopsis:           On-line accumulation of rank-based statistics
 description:
   A new data structure for accurate on-line accumulation of rank-based statistics such as quantiles and trimmed means.
@@ -26,7 +26,7 @@ tested-with:
    || ==8.8.4
    || ==8.10.7
    || ==9.0.2
-   || ==9.2.2
+   || ==9.2.3
 
 build-type:         Simple
 extra-source-files:
@@ -58,8 +58,8 @@ library
       base-compat        >=0.10.1   && <0.13
     , reducers           >=3.12.2   && <3.13
     , semigroupoids      >=5.2.2    && <5.4
-    , vector             >=0.12.0.1 && <0.13
-    , vector-algorithms  >=0.7.0.1  && <0.9
+    , vector             >=0.12.0.1 && <0.14
+    , vector-algorithms  >=0.7.0.1  && <0.10
 
   exposed-modules:
     Data.TDigest
