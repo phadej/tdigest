@@ -26,13 +26,13 @@ module Data.TDigest.Postprocess.Internal (
     Affine (..),
     ) where
 
-import Data.Foldable           (toList, traverse_)
-import Data.Functor.Compose    (Compose (..))
-import Data.Functor.Identity   (Identity (..))
-import Data.List.NonEmpty      (NonEmpty (..), nonEmpty)
-import Data.Proxy              (Proxy (..))
-import Data.Semigroup          (Semigroup (..))
-import Data.Semigroup.Foldable (foldMap1)
+import Data.Foldable         (toList, traverse_)
+import Data.Foldable1        (foldMap1)
+import Data.Functor.Compose  (Compose (..))
+import Data.Functor.Identity (Identity (..))
+import Data.List.NonEmpty    (NonEmpty (..), nonEmpty)
+import Data.Proxy            (Proxy (..))
+import Data.Semigroup        (Semigroup (..))
 import Prelude ()
 import Prelude.Compat
 
