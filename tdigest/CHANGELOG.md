@@ -1,3 +1,7 @@
+## 0.3
+
+- Depend on `foldable1-classes-compat` instead of `semigroupoids`.
+
 ## 0.2.1.1
 
 - `build-type: Simple`

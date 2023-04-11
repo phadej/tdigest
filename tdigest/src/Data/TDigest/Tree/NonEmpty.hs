@@ -60,14 +60,14 @@ module Data.TDigest.Tree.NonEmpty (
 import Prelude ()
 import Prelude.Compat
 
-import Control.DeepSeq         (NFData (..))
-import Control.Monad           (when)
-import Data.Binary             (Binary (..))
-import Data.Functor.Identity   (Identity (..))
-import Data.Semigroup          (Semigroup (..))
-import Data.Semigroup.Foldable (Foldable1)
-import Data.Semigroup.Reducer  (Reducer (..))
-import GHC.TypeLits            (KnownNat)
+import Control.DeepSeq        (NFData (..))
+import Control.Monad          (when)
+import Data.Binary            (Binary (..))
+import Data.Foldable1         (Foldable1)
+import Data.Functor.Identity  (Identity (..))
+import Data.Semigroup         (Semigroup (..))
+import Data.Semigroup.Reducer (Reducer (..))
+import GHC.TypeLits           (KnownNat)
 
 import           Data.TDigest.Internal
 import qualified Data.TDigest.Postprocess   as PP

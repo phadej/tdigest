@@ -1,24 +1,25 @@
 packages:
   tdigest
-  tdigest-Chart
-  tdigest-bench
+--  tdigest-Chart
+--  tdigest-bench
 
 tests: True
 benchmarks: True
 
-allow-newer: active-0.2.0.14:base
-allow-newer: diagrams-core-1.4.2:base
-allow-newer: diagrams-lib-1.4.3:base
-allow-newer: diagrams-postscript-1.5:base
-allow-newer: diagrams-solve-0.1.1:base
-allow-newer: diagrams-svg-1.4.3:base
-allow-newer: dual-tree-0.2.2.1:base
-allow-newer: monoid-extras-0.5.1:base
-allow-newer: statestack-0.3:base
-allow-newer: svg-builder-0.1.1:base
+-- allow-newer: active:base
+-- allow-newer: diagrams-core:base
+-- allow-newer: diagrams-lib:base
+-- allow-newer: diagrams-lib:semigroups
+-- allow-newer: diagrams-postscript:base
+-- allow-newer: diagrams-solve:base
+-- allow-newer: diagrams-svg:base
+-- allow-newer: dual-tree:base
+-- allow-newer: monoid-extras:base
+-- allow-newer: statestack:base
+-- allow-newer: svg-builder:base
 
-allow-newer: lens
+-- allow-newer: lens
 
-allow-newer: diagrams-svg-1.4.3:base64-bytestring
+-- allow-newer: diagrams-svg:base64-bytestring
 
-allow-newer: dual-tree-0.2.2.1:newtype-generics
+-- allow-newer: dual-tree:newtype-generics

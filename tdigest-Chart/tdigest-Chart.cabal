@@ -44,7 +44,7 @@ library
   build-depends:    base >=4.7 && <4.15
 
   if !impl(ghc >=8.0)
-    build-depends: semigroups >=0.18.4 && <0.20
+    build-depends: semigroups >=0.18.4 && <0.21
 
   -- other dependencies
   build-depends:
@@ -52,8 +52,8 @@ library
     , Chart          >=1.8.3  && <1.10
     , colour         >=2.3.3  && <2.4
     , lens           >=4.15.4 && <5.1
-    , semigroupoids  >=5.2.2  && <5.4
-    , tdigest        >=0.2    && <0.3
+    , semigroupoids  >=5.2.2  && <6.1
+    , tdigest        >=0.3    && <0.4
 
   exposed-modules:  Graphics.Rendering.Chart.Plot.TDigest
   default-language: Haskell2010
