@@ -12,16 +12,13 @@ import Control.DeepSeq        (NFData (..))
 import Control.Monad.ST       (ST, runST)
 import Data.Binary            (Binary (..))
 import Data.Either            (isRight)
-import Data.Foldable          (toList)
-import Data.List.Compat       (foldl')
+import Data.Foldable          (toList, foldl')
 import Data.List.NonEmpty     (nonEmpty)
 import Data.Ord               (comparing)
 import Data.Proxy             (Proxy (..))
 import Data.Semigroup         (Semigroup (..))
 import Data.Semigroup.Reducer (Reducer (..))
 import GHC.TypeLits           (KnownNat, Nat, natVal)
-import Prelude ()
-import Prelude.Compat
 
 import qualified Data.Vector.Algorithms.Heap as VHeap
 import qualified Data.Vector.Unboxed         as VU

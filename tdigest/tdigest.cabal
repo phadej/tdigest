@@ -1,7 +1,6 @@
-cabal-version:      >=1.10
+cabal-version:      2.2
 name:               tdigest
-version:            0.3
-x-revision:         1
+version:            0.3.1
 synopsis:           On-line accumulation of rank-based statistics
 description:
   A new data structure for accurate on-line accumulation of rank-based statistics such as quantiles and trimmed means.
@@ -14,27 +13,23 @@ homepage:           https://github.com/phadej/haskell-tdigest#readme
 bug-reports:        https://github.com/phadej/haskell-tdigest/issues
 author:             Oleg Grenrus <oleg.grenrus@iki.fi>
 maintainer:         Oleg Grenrus <oleg.grenrus@iki.fi>
-license:            BSD3
+license:            BSD-3-Clause
 license-file:       LICENSE
 tested-with:
-  GHC ==7.8.4
-   || ==7.10.3
-   || ==8.0.2
-   || ==8.2.2
-   || ==8.4.4
-   || ==8.6.5
+  GHC ==8.6.5
    || ==8.8.4
    || ==8.10.7
    || ==9.0.2
    || ==9.2.8
    || ==9.4.8
-   || ==9.6.3
-   || ==9.8.1
+   || ==9.6.6
+   || ==9.8.2
+   || ==9.10.1
 
 build-type:         Simple
 extra-source-files:
-  README.md
   CHANGELOG.md
+  README.md
 
 source-repository head
   type:     git
@@ -48,20 +43,16 @@ library
 
   -- GHC boot libraries
   build-depends:
-      base          >=4.7     && <4.21
-    , binary        >=0.7.1.0 && <0.10
-    , deepseq       >=1.3.0.2 && <1.6
-    , transformers  >=0.3     && <0.7
-
-  if !impl(ghc >=8.0)
-    build-depends: semigroups >=0.18.4 && <0.21
+    , base          >=4.12.0.0 && <4.22
+    , binary        >=0.8.6.0  && <0.10
+    , deepseq       >=1.4.4.0  && <1.6
+    , transformers  >=0.5.6.2  && <0.7
 
   if !impl(ghc >=9.6)
     build-depends: foldable1-classes-compat >=0.1 && <0.2
 
   -- other dependencies
   build-depends:
-      base-compat        >=0.10.1   && <0.14
     , reducers           >=3.12.2   && <3.13
     , vector             >=0.12.0.1 && <0.14
     , vector-algorithms  >=0.7.0.1  && <0.10
@@ -97,13 +88,12 @@ test-suite tdigest-tests
   ghc-options:      -Wall -threaded
   hs-source-dirs:   tests
   build-depends:
-      base
-    , base-compat
+    , base
     , binary
     , deepseq
     , semigroups
-    , tasty              >=0.11.0.4 && <1.5
-    , tasty-quickcheck   >=0.8.4    && <0.11
+    , tasty              >=0.11.0.4 && <1.6
+    , tasty-quickcheck   >=0.8.4    && <0.12
     , tdigest
     , vector
     , vector-algorithms

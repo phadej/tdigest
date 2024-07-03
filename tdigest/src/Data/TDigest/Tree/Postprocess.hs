@@ -18,9 +18,6 @@ module Data.TDigest.Tree.Postprocess (
     icdf,
     ) where
 
-import Prelude ()
-import Prelude.Compat
-
 import Data.TDigest.Tree.Internal
 
 import qualified Data.TDigest.Postprocess as PP

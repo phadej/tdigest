@@ -19,8 +19,6 @@ module Data.TDigest.Vector.Postprocess (
     ) where
 
 import GHC.TypeLits   (KnownNat)
-import Prelude ()
-import Prelude.Compat
 
 import Data.TDigest.Vector.Internal
 

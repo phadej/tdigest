@@ -57,9 +57,6 @@ module Data.TDigest.Tree.NonEmpty (
     debugPrint,
     ) where
 
-import Prelude ()
-import Prelude.Compat
-
 import Control.DeepSeq        (NFData (..))
 import Control.Monad          (when)
 import Data.Binary            (Binary (..))
@@ -175,9 +172,8 @@ debugPrint = T.debugPrint . unEmpty
 
 -- $setup
 -- >>> :set -XDataKinds
--- >>> import Prelude.Compat
 -- >>> import Data.List.NonEmpty (NonEmpty (..))
--- >>> import Data.List.Compat (foldl')
+-- >>> import Data.Foldable (foldl')
 --
 -- >>> let merge [] ys = []; merge xs [] = xs; merge (x:xs) (y:ys) = x : y : merge xs ys
 -- >>> let fairshuffle' xs = uncurry merge (splitAt (Prelude.length xs `div` 2) xs)

@@ -20,8 +20,6 @@ module Data.TDigest.Postprocess (
     ) where
 
 import qualified Data.List.NonEmpty as NE
-import           Prelude ()
-import           Prelude.Compat
 
 import qualified Data.TDigest.Postprocess.Internal as I
 
