@@ -97,10 +97,9 @@ import Data.TDigest.Vector.Postprocess
 
 -- $setup
 -- >>> :set -XDataKinds
--- >>> import Prelude.Compat
--- >>> import Data.List.Compat (foldl')
+-- >>> import Data.Foldable (foldl')
 -- >>> import Data.Semigroup ((<>))
 --
 -- >>> let merge [] ys = []; merge xs [] = xs; merge (x:xs) (y:ys) = x : y : merge xs ys
--- >>> let fairshuffle' xs = uncurry merge (splitAt (Prelude.Compat.length xs `div` 2) xs)
+-- >>> let fairshuffle' xs = uncurry merge (splitAt (Prelude.length xs `div` 2) xs)
 -- >>> let fairshuffle xs = iterate fairshuffle' xs !! 5

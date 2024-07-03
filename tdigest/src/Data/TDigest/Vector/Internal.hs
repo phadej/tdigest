@@ -14,8 +14,6 @@ import Data.Proxy             (Proxy (..))
 import Data.Semigroup         (Semigroup (..))
 import Data.Semigroup.Reducer (Reducer (..))
 import GHC.TypeLits           (KnownNat, Nat, natVal)
-import Prelude ()
-import Prelude.Compat
 
 import qualified Data.Vector.Unboxed as VU
 

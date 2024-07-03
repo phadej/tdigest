@@ -33,8 +33,6 @@ import Data.Functor.Identity (Identity (..))
 import Data.List.NonEmpty    (NonEmpty (..), nonEmpty)
 import Data.Proxy            (Proxy (..))
 import Data.Semigroup        (Semigroup (..))
-import Prelude ()
-import Prelude.Compat
 
 import qualified Data.List.NonEmpty as NE
 
